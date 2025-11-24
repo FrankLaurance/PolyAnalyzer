@@ -10,11 +10,26 @@
 - 🎨 支持自定义颜色、字体大小等样式
 - 💾 批量导出高质量图片(PNG/PDF)
 - 🖥️ 基于Streamlit的Web界面，操作简单直观
-- 📦 支持打包为独立可执行文件
+- 📦 支持多种打包方式，满足不同需求
 
 ## 🚀 快速开始
 
-### 方式一：直接运行Python脚本
+### 方式一：使用 Windows 便携版（推荐 - 无需安装Python）
+
+**适合：完全不懂编程的用户**
+
+1. 下载 `GPCtoPic_Windows_Portable_vX.X.zip`
+2. 解压到任意位置
+3. 双击 `启动应用.bat`
+4. 浏览器自动打开，开始使用
+
+✅ 优点：
+- 无需安装任何软件
+- 解压即用，体积约 150-200MB
+- 支持读写本地文件
+- 删除文件夹即完成卸载
+
+### 方式二：直接运行Python脚本（开发者）
 
 #### 1. 安装依赖
 
@@ -44,9 +59,25 @@ streamlit run main.py
 
 程序将自动在浏览器中打开，默认地址为 `http://localhost:8501`
 
-### 方式二：使用打包后的可执行文件
+### 方式三：使用 PyInstaller 打包版本
 
-下载已打包的可执行文件（从Releases页面），双击运行即可，无需安装Python环境。
+**适合：需要单文件分发的场景**
+
+1. 下载 `GPCtoPic.exe`（从 Releases 页面）
+2. 双击运行即可
+
+⚠️ 注意：
+- 文件较大（约 300-500MB）
+- 可能被杀毒软件误报
+- 首次启动较慢
+
+### 📦 打包方式对比
+
+| 方式 | 体积 | 用户体验 | 适用场景 |
+|------|------|----------|----------|
+| **Windows 便携版** | ~150MB | ⭐⭐⭐⭐⭐ | 推荐给普通用户 |
+| **PyInstaller exe** | ~300-500MB | ⭐⭐⭐⭐ | 需要单文件分发 |
+| **源码运行** | ~10MB | ⭐⭐⭐ | 开发者和技术用户 |
 
 ## 📖 使用说明
 
@@ -121,43 +152,75 @@ DrawTable = True
 
 您可以根据需要修改配置文件，或在Web界面中直接调整参数。
 
-## 📦 打包为可执行文件
+## 📦 打包说明
 
-### 自动打包（推荐）
+### 方法一：打包 Windows 便携版（推荐）
 
-使用提供的脚本自动完成打包：
+**特点：体积小、绿色便携、用户体验最佳**
 
-**macOS/Linux:**
 ```bash
-chmod +x build.sh
-./build.sh
+# 在 macOS/Linux 上执行
+bash package_windows.sh
 ```
 
-**Windows:**
-```powershell
+脚本会自动：
+1. 下载 Python 嵌入式版本
+2. 安装所有依赖
+3. 创建启动脚本
+4. 打包成 ZIP 文件
+
+生成的文件结构：
+```
+GPCtoPic_Windows_Portable_v1.0/
+├── 启动应用.bat          # 用户双击启动
+├── python/               # 内嵌 Python 环境
+├── main.py              # 应用代码
+├── datapath/            # 数据目录
+└── 使用说明.txt          # 用户文档
+```
+
+**优势：**
+- ✅ 体积约 150-200MB（比 PyInstaller 小 50%）
+- ✅ 完全绿色便携，无需安装
+- ✅ 支持读写本地文件
+- ✅ 用户体验好，双击即用
+
+### 方法二：PyInstaller 打包
+
+**特点：单文件 exe，但体积较大**
+
+**自动打包脚本：**
+
+```bash
+# macOS/Linux
+chmod +x build.sh
+./build.sh
+
+# Windows
 .\build.ps1
 ```
 
-### 手动打包
-
-#### 1. 安装PyInstaller
+**手动打包：**
 
 ```bash
 pip install pyinstaller
-```
-
-**Windows:**
-从 [UPX官网](https://upx.github.io/) 下载并添加到PATH
-
-#### 2. 执行打包
-
-```bash
 pyinstaller GPCtoPic.spec
 ```
 
-打包完成后，可执行文件将位于 `dist/GPCtoPic` 目录中。
+生成的 exe 文件位于 `dist/GPCtoPic` 目录。
 
-详细打包说明请参考 [BUILD_README.md](BUILD_README.md)
+**注意事项：**
+- 文件较大（300-500MB）
+- 可能需要 UPX 压缩
+- 详细说明见 [BUILD_README.md](BUILD_README.md)
+
+### 打包方式选择建议
+
+| 场景 | 推荐方式 | 原因 |
+|------|----------|------|
+| 分发给普通用户 | **Windows 便携版** | 体积小、用户体验好 |
+| 需要单文件 | PyInstaller | 便于分发和管理 |
+| 开发测试 | 源码运行 | 灵活方便 |
 
 ## 📋 依赖包
 
@@ -177,19 +240,24 @@ pyinstaller GPCtoPic.spec
 
 ```
 GPCtoPic/
-├── main.py                 # 主程序文件
-├── run_main.py            # 运行启动脚本
-├── cnames.py              # 中文名称映射
-├── requirements.txt       # Python依赖
-├── GPCtoPic.spec         # PyInstaller配置文件
-├── build.sh              # macOS/Linux打包脚本
-├── build.ps1             # Windows打包脚本
-├── BUILD_README.md       # 打包详细说明
-├── main.ico              # 程序图标
-├── sinopec.jpg           # 页面图标
-├── setting/              # 配置文件目录
+├── main.py                    # 主程序文件
+├── ui.py                      # Web界面
+├── run_main.py               # 运行启动脚本
+├── cnames.py                 # 中文名称映射
+├── requirements.txt          # Python依赖
+├── GPCtoPic.spec            # PyInstaller配置文件
+├── package_windows.sh        # Windows便携版打包脚本
+├── build.sh                  # macOS/Linux PyInstaller打包脚本
+├── build.ps1                 # Windows PyInstaller打包脚本
+├── BUILD_README.md          # 打包详细说明
+├── main.ico                  # 程序图标
+├── sinopec.jpg              # 页面图标
+├── setting/                  # 配置文件目录
 │   └── defaultSetting.ini
-└── datapath/             # 数据文件目录（默认）
+├── datapath/                 # 数据文件目录（输入）
+├── GPC_output/              # GPC输出目录
+├── Mw_output/               # 分子量输出目录
+└── logs/                     # 日志文件目录
 ```
 
 ## 🐛 故障排除
@@ -207,8 +275,19 @@ GPCtoPic/
 - 检查磁盘空间是否充足
 
 ### 问题4：打包后文件过大
-- 确认已按照BUILD_README.md中的优化步骤操作
-- 安装UPX进行压缩
+- **推荐使用 Windows 便携版**（体积更小）
+- PyInstaller 打包可安装 UPX 进行压缩
+- 参考 BUILD_README.md 中的优化步骤
+
+### 问题5：便携版无法启动
+- 检查杀毒软件是否拦截
+- 尝试右键"以管理员身份运行"
+- 查看 logs/ 目录中的日志文件
+
+### 问题6：需要分发给没有Python的用户
+- **使用 Windows 便携版**（推荐，约150MB）
+- 或使用 PyInstaller 打包（约300-500MB）
+- 两种方式都无需用户安装Python
 
 ## 📄 许可证
 
