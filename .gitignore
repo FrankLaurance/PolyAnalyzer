@@ -15,3 +15,15 @@ env/
 # Distribution / Packaging
 dist/
 build/
+
+# Data files - GPC analysis data
+*.rst
+datapath/*.rst
+
+# Output directories
+Mw_output/
+GPC_output/
+
+# Logs
+logs/
+*.log
