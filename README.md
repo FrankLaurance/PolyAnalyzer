@@ -1,5 +1,7 @@
 # GPCtoPic - GPC数据可视化工具
 
+[English](README_EN.md) | 中文
+
 一个用于处理和可视化GPC(凝胶渗透色谱)数据的Python工具，可以生成柱状图、分子量分布曲线和数据表格。
 
 ## ✨ 功能特点
@@ -10,6 +12,7 @@
 - 🎨 支持自定义颜色、字体大小等样式
 - 💾 批量导出高质量图片(PNG/PDF)
 - 🖥️ 基于Streamlit的Web界面，操作简单直观
+- 🌍 支持多语言界面（中文/English）
 - 📦 支持多种打包方式，满足不同需求
 
 ## 🚀 快速开始
@@ -80,6 +83,15 @@ streamlit run main.py
 | **源码运行** | ~10MB | ⭐⭐⭐ | 开发者和技术用户 |
 
 ## 📖 使用说明
+
+### 0. 语言切换
+
+应用支持中文(简体)和英语界面：
+1. 启动应用后，点击左侧边栏
+2. 在顶部的"语言/Language"下拉菜单中选择您的语言
+3. 界面会自动刷新为所选语言
+
+详细说明请查看 [I18N_README.md](I18N_README.md)
 
 ### 1. 准备数据文件
 
@@ -242,6 +254,7 @@ pyinstaller GPCtoPic.spec
 GPCtoPic/
 ├── main.py                    # 主程序文件
 ├── ui.py                      # Web界面
+├── i18n.py                    # 国际化模块
 ├── run_main.py               # 运行启动脚本
 ├── cnames.py                 # 中文名称映射
 ├── requirements.txt          # Python依赖
@@ -250,10 +263,12 @@ GPCtoPic/
 ├── build.sh                  # macOS/Linux PyInstaller打包脚本
 ├── build.ps1                 # Windows PyInstaller打包脚本
 ├── BUILD_README.md          # 打包详细说明
+├── I18N_README.md           # 国际化说明文档
 ├── main.ico                  # 程序图标
 ├── sinopec.jpg              # 页面图标
 ├── setting/                  # 配置文件目录
-│   └── defaultSetting.ini
+│   ├── defaultSetting.ini   # 默认设置
+│   └── language.json        # 语言偏好（自动生成）
 ├── datapath/                 # 数据文件目录（输入）
 ├── GPC_output/              # GPC输出目录
 ├── Mw_output/               # 分子量输出目录
