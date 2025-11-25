@@ -523,6 +523,7 @@ class BaseAnalyzer:
             bool: 读取成功返回True，失败返回False
         """
         self.reset(reset_peak_data=reset_peak_data)
+        self.filename = name
         file_path = os.path.join(self.data_path, name)
         
         try:
@@ -663,7 +664,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
             bool: 存在同名文件返回True
         """
         for file in self.selected_file:
-            if os.path.exists(os.path.join(self.output_dir, file.split('.')[0] + '.png')):
+            if os.path.exists(os.path.join(self.output_dir, os.path.splitext(file)[0] + '.png')):
                 return True
         return False    
 
@@ -736,6 +737,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
             bool: 读取成功返回True，失败返回False
         """
         self.reset()
+        self.filename = name
         file_path = os.path.join(self.data_path, name)
         
         try:
@@ -1019,7 +1021,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
                 self._create_stats_table(fig, gs)
             
             # 步骤6: 保存和显示
-            result_name = self.filename.split('.')[0]
+            result_name = os.path.splitext(self.filename)[0]
             if not os.path.exists(self.output_dir):
                 os.makedirs(self.output_dir, exist_ok=True)
             if self.save_picture:

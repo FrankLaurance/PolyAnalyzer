@@ -27,3 +27,6 @@ GPC_output/
 # Logs
 logs/
 *.log
+
+# Windows Portable Build
+dist_portable_windows/
