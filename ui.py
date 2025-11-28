@@ -16,28 +16,6 @@ start_time = time.time()
 i18n = get_i18n()
 
 
-def open_folder(path: str) -> None:
-    """跨平台打开文件夹
-    
-    Args:
-        path: 文件夹路径
-    """
-    import platform
-    import subprocess
-    
-    try:
-        if platform.system() == "Windows":
-            os.startfile(path)
-        elif platform.system() == "Darwin":  # macOS
-            subprocess.run(["open", path])
-        elif platform.system() == "Linux":
-            subprocess.run(["xdg-open", path])
-        else:
-            st.warning(t("unsupported_os"))
-    except Exception as e:
-        st.error(t("cannot_open_folder", e))
-
-
 def render_mw_settings(mw: 'MolecularWeightAnalyzer') -> None:
     """渲染分子量分析器的设置界面
     
@@ -141,7 +119,7 @@ def render_mw_ui(default_dir: str) -> None:
 
     if os.path.isdir(datapath_mw):
         if openDir_mw_col.button(t("open_folder"), key="openDir_mw_col_mw"):
-            open_folder(mw.output_dir)
+            mw.open_folder(mw.output_dir)
 
 
 def render_gpc_ui(default_dir: str) -> None:
@@ -199,7 +177,7 @@ def render_gpc_ui(default_dir: str) -> None:
 
     if os.path.isdir(datapath_gpc):
         if openDir_gpc_col.button(t("open_folder"), key="openDir_gpc_col"):
-            open_folder(gpc.output_dir)
+            gpc.open_folder(gpc.output_dir)
 
 
 def render_other_ui(default_dir: str) -> None:

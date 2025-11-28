@@ -497,7 +497,7 @@ To backup your data, please copy the above folders.
 EOF
 
 # 创建使用说明
-cat > "$OUTPUT_DIR/$PACKAGE_NAME/User_Guide.txt" << 'EOF'
+cat > "$OUTPUT_DIR/$PACKAGE_NAME/USER_GUIDE_EN.txt" << 'EOF'
 GPCtoPic Windows Portable Version - User Guide
 ===============================================
 

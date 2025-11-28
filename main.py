@@ -246,24 +246,6 @@ class DataValidator:
 # 创建全局日志器实例
 logger = Logger()
 
-def open_folder(path: str) -> None:
-    """跨平台打开文件夹
-    
-    Args:
-        path: 文件夹路径
-    """
-    try:
-        if platform.system() == "Windows":
-            os.startfile(path)
-        elif platform.system() == "Darwin":  # macOS
-            subprocess.run(["open", path])
-        elif platform.system() == "Linux":
-            subprocess.run(["xdg-open", path])
-        else:
-            st.warning("不支持的操作系统")
-    except Exception as e:
-        st.error(f"无法打开文件夹: {e}")
-
 
 class SettingsManager:
     """设置管理器 - 负责读取、保存和管理绘图设置"""
@@ -481,6 +463,24 @@ class BaseAnalyzer:
         self.logger = logger  # 使用全局日志器实例
         self.validator = DataValidator(self.logger)
     
+    def open_folder(self, path: str) -> None:
+        """跨平台打开文件夹
+        
+        Args:
+            path: 文件夹路径
+        """
+        try:
+            if platform.system() == "Windows":
+                os.startfile(path)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", path])
+            elif platform.system() == "Linux":
+                subprocess.run(["xdg-open", path])
+            else:
+                self.logger.warning("不支持的操作系统")
+        except Exception as e:
+            self.logger.error(f"无法打开文件夹: {e}")
+
     def reset(self, reset_peak_data: bool = True) -> None:
         """重置所有数据属性
         
