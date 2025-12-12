@@ -20,7 +20,7 @@
 
 ### 2. PyInstaller Spec 文件创建
 
-**文件**: `GPCtoPic.spec`
+**文件**: `PolyAnalyzer.spec`
 
 **关键配置**:
 - ✅ 排除包列表:
@@ -163,7 +163,7 @@ excludes=[
 
 **手动打包**:
 ```bash
-pyinstaller GPCtoPic.spec --clean
+pyinstaller PolyAnalyzer.spec --clean
 ```
 
 ### 运行打包后的程序
@@ -171,11 +171,11 @@ pyinstaller GPCtoPic.spec --clean
 ```bash
 # macOS/Linux
 cd dist
-./GPCtoPic
+./PolyAnalyzer
 
 # Windows
 cd dist
-.\GPCtoPic.exe
+.\PolyAnalyzer.exe
 ```
 
 ## ⚠️ 注意事项

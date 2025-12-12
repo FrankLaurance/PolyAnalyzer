@@ -6,7 +6,7 @@
 set -e  # 遇到错误立即退出
 
 echo "======================================"
-echo "  GPCtoPic Windows 便携版打包工具"
+echo "  PolyAnalyzer Windows 便携版打包工具"
 echo "======================================"
 echo ""
 echo "⚠️  注意："
@@ -23,7 +23,7 @@ if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
 fi
 
 # 配置变量
-APP_NAME="GPCtoPic"
+APP_NAME="PolyAnalyzer"
 # 从 main.py 获取版本号
 VERSION=$(grep 'APP_VERSION =' main.py | cut -d '"' -f 2)
 if [ -z "$VERSION" ]; then
@@ -145,6 +145,7 @@ cp cnames.py "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp run_main.py "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp requirements.txt "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp README.md "$OUTPUT_DIR/$PACKAGE_NAME/"
+cp README_EN.md "$OUTPUT_DIR/$PACKAGE_NAME/"
 cp LICENSE "$OUTPUT_DIR/$PACKAGE_NAME/" 2>/dev/null || true
 
 # 复制必要的目录
@@ -154,8 +155,8 @@ mkdir -p "$OUTPUT_DIR/$PACKAGE_NAME/GPC_output"
 mkdir -p "$OUTPUT_DIR/$PACKAGE_NAME/Mw_output"
 mkdir -p "$OUTPUT_DIR/$PACKAGE_NAME/logs"
 
-# 复制图片资源（如果存在）
-cp sinopec.jpg "$OUTPUT_DIR/$PACKAGE_NAME/" 2>/dev/null || true
+# 复制图标资源（如果存在）
+cp main.ico "$OUTPUT_DIR/$PACKAGE_NAME/" 2>/dev/null || echo "   Warning: main.ico not found, skipping..."
 
 # 创建安装脚本（在 Windows 上运行）
 cat > "$OUTPUT_DIR/$PACKAGE_NAME/install_dependencies.bat" << 'EOF'
@@ -334,10 +335,10 @@ EOF
 cat > "$OUTPUT_DIR/$PACKAGE_NAME/Start_App.bat" << 'EOF'
 @echo off
 chcp 65001 >nul
-title GPCtoPic - GPC Data Processing Tool
+title PolyAnalyzer - Polymer Data Analysis Tool
 
 echo ====================================
-echo   Starting GPCtoPic...
+echo   Starting PolyAnalyzer...
 echo ====================================
 echo.
 
@@ -389,7 +390,7 @@ cat > "$OUTPUT_DIR/$PACKAGE_NAME/Command_Line.bat" << 'EOF'
 chcp 65001 >nul
 
 echo ====================================
-echo   GPCtoPic Command Line Mode
+echo   PolyAnalyzer Command Line Mode
 echo ====================================
 echo.
 echo You can now use Python commands
@@ -485,7 +486,7 @@ EOF
 
 # 创建卸载说明
 cat > "$OUTPUT_DIR/$PACKAGE_NAME/How_to_Uninstall.txt" << 'EOF'
-GPCtoPic Portable Version - Uninstallation Guide
+PolyAnalyzer Portable Version - Uninstallation Guide
 ================================================
 
 This is a portable application with no system installation.
@@ -506,7 +507,7 @@ EOF
 
 # 创建使用说明
 cat > "$OUTPUT_DIR/$PACKAGE_NAME/USER_GUIDE_EN.txt" << 'EOF'
-GPCtoPic Windows Portable Version - User Guide
+PolyAnalyzer Windows Portable Version - User Guide
 ===============================================
 
 Quick Start (First Time Use)
@@ -549,7 +550,7 @@ A: Yes, the entire folder can be moved anywhere
 
 Technical Support
 -----------------
-GitHub: https://github.com/FrankLaurance/GPCtoPic
+GitHub: https://github.com/FrankLaurance/PolyAnalyzer
 Issue Reporting: Submit an issue on GitHub
 
 Version Information
@@ -560,7 +561,7 @@ EOF
 
 # 创建使用说明
 cat > "$OUTPUT_DIR/$PACKAGE_NAME/USER_GUIDE.txt" << 'EOF'
-GPCtoPic Windows 便携版使用说明
+PolyAnalyzer Windows 便携版使用说明
 ================================
 
 1. 首次使用

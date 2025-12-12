@@ -1,166 +1,319 @@
-# GPCtoPic - GPC Data Visualization Tool
+# PolyAnalyzer - Polymer Materials Data Visualization Tool
 
-A Python tool for processing and visualizing GPC (Gel Permeation Chromatography) data, capable of generating bar charts, molecular weight distribution curves, and data tables.
+English | [中文](README.md)
 
-## ✨ Features
+A professional data analysis and visualization tool for polymer materials, integrating GPC (Gel Permeation Chromatography) and DSC (Differential Scanning Calorimetry) analysis capabilities, providing researchers with efficient and intuitive data processing experience.
 
-- 📊 Automatic reading and processing of GPC data files
-- 📈 Generate beautiful bar charts and molecular weight distribution curves
-- 📋 Create formatted data tables
-- 🎨 Support custom colors, font sizes, and other styles
-- 💾 Batch export high-quality images (PNG/PDF)
-- 🖥️ Web interface based on Streamlit, simple and intuitive operation
-- 🌍 Multi-language interface support (Chinese/English)
-- 📦 Multiple packaging methods to meet different needs
+## ✨ Core Features
+
+### 📊 GPC Gel Permeation Chromatography Analysis
+- Automatic reading and processing of GPC data files
+- Generate beautiful bar charts and molecular weight distribution curves
+- Create professional molecular weight data tables
+- Batch processing of multiple sample data
+
+### 🔥 DSC Differential Scanning Calorimetry Analysis
+- Automatic recognition and parsing of DSC heat flow data
+- Intelligent extraction of multi-cycle test data
+- Draw heat flow vs. temperature curves
+- Support automatic peak detection and centering display
+- Multi-cycle data comparison analysis
+- Data segmentation saving and visualization
+
+### 🎨 General Features
+- Support custom colors, line widths, font sizes and other styles
+- Batch export high-quality images (PNG, 300 DPI)
+- Modern web interface based on Streamlit
+- Multi-language interface support (Chinese/English)
+- Flexible configuration management system
+- Complete logging functionality
+- Multiple packaging methods to meet different deployment needs
 
 ## 🚀 Quick Start
 
-### Method 1: Windows Portable Version (Recommended - No Python Required)
+### Method 1: Windows Portable Version (Recommended - Zero Barrier to Entry)
 
-**For: Users with no programming experience**
+**Target Users: Researchers, Laboratory Users, Non-programmers**
 
-1. Download `GPCtoPic_Windows_Portable_vX.X.zip`
-2. Extract to any location
-3. Double-click `启动应用.bat` (Start Application.bat)
-4. Browser opens automatically, start using
+#### Usage Steps:
+1. Download the latest `PolyAnalyzer_Windows_Portable_vX.X.X.zip` from [Releases](https://github.com/FrankLaurance/PolyAnalyzer/releases)
+2. Extract to any location (paths without Chinese characters and spaces recommended)
+3. Double-click `启动应用.bat` or `Start_App.bat`
+4. Browser automatically opens the application interface, ready to use
 
-✅ Advantages:
-- No software installation required
-- Extract and use, size ~150-200MB
-- Supports reading/writing local files
-- Delete folder to uninstall
+#### Features:
+- ✅ Completely portable and installation-free, no Python environment configuration needed
+- ✅ All dependencies included, size approximately 150-200MB
+- ✅ Full support for local file read/write operations
+- ✅ Uninstall by simply deleting the folder
+- ✅ Offline usage supported, data security guaranteed
 
-### Method 2: Run Python Script Directly (Developers)
+### Method 2: Run from Source Code (Developers & Technical Users)
 
-#### 1. Install Dependencies
+**Target Users: Developers, Users Needing Customization, Cross-platform Usage**
+
+#### System Requirements:
+- Python 3.8 or higher
+- pip package manager
+
+#### Installation Steps:
 
 ```bash
-# Clone project
-git clone https://github.com/FrankLaurance/GPCtoPic.git
-cd GPCtoPic
+# 1. Clone the project repository
+git clone https://github.com/FrankLaurance/PolyAnalyzer.git
+cd PolyAnalyzer
 
-# Create virtual environment (recommended)
+# 2. Create virtual environment (strongly recommended)
 python -m venv myenv
 
-# Activate virtual environment
+# 3. Activate virtual environment
 # macOS/Linux:
 source myenv/bin/activate
 # Windows:
 myenv\Scripts\activate
 
-# Install dependencies
+# 4. Install dependencies
 pip install -r requirements.txt
 ```
 
-#### 2. Run Program
+#### Run Program:
 
 ```bash
+# Method 1: Run directly with Streamlit
 streamlit run main.py
+
+# Method 2: Use the project's run script
+python run_main.py
 ```
 
 The program will automatically open in your browser at `http://localhost:8501`
 
-### Method 3: PyInstaller Packaged Version
+### Method 3: PyInstaller Single-File Version (Build It Yourself)
 
-**For: Single-file distribution scenarios**
+**Target Users: Scenarios Requiring Single-File Distribution, Simplified Deployment**
 
-1. Download `GPCtoPic.exe` (from Releases page)
-2. Double-click to run
+#### Build Steps:
 
-⚠️ Note:
-- Large file size (~300-500MB)
-- May be flagged by antivirus software
-- First startup is slow
+**Prerequisites:**
+```bash
+# Ensure project dependencies are installed
+pip install -r requirements.txt
+```
 
-### 📦 Packaging Method Comparison
+**Automatic Build (Recommended):**
+```bash
+# macOS/Linux
+chmod +x build.sh
+./build.sh
 
-| Method | Size | User Experience | Use Case |
-|--------|------|-----------------|----------|
-| **Windows Portable** | ~150MB | ⭐⭐⭐⭐⭐ | Recommended for regular users |
-| **PyInstaller exe** | ~300-500MB | ⭐⭐⭐⭐ | Single-file distribution needed |
-| **Source Code** | ~10MB | ⭐⭐⭐ | Developers and technical users |
+# Windows
+.\build.ps1
+```
+
+**Manual Build:**
+```bash
+pip install pyinstaller
+pyinstaller PolyAnalyzer.spec
+```
+
+The generated `PolyAnalyzer.exe` is located in the `dist/PolyAnalyzer/` directory
+
+> 💡 **Note:** Build scripts will automatically install PyInstaller, but will not install project dependencies. Please ensure you run `pip install -r requirements.txt` first.
+
+#### Usage Instructions:
+1. Distribute the generated exe file to users
+2. Users can run it by double-clicking, no installation required
+
+#### Notes:
+- ⚠️ Large file size (approximately 300-500MB), contains complete runtime environment
+- ⚠️ First startup requires decompression cache, startup time about 10-30 seconds
+- ⚠️ Some antivirus software may flag false positives, add to trust or use portable version
+- ℹ️ For detailed packaging instructions, see [BUILD_README.md](BUILD_README.md)
+
+### 📦 Deployment Method Comparison
+
+| Method | Size | Startup Speed | User Experience | Target Users | Cross-Platform |
+|--------|------|---------------|-----------------|--------------|----------------|
+| **Windows Portable** | ~150MB | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Lab users, Researchers | Windows |
+| **Source Code** | ~10MB | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | Developers, Technical users | All Platforms |
+| **PyInstaller exe** | ~300-500MB | ⭐⭐⭐ | ⭐⭐⭐ | Single-file distribution | Windows |
 
 ## 📖 User Guide
 
 ### 0. Language Switching
 
-The application supports Chinese (Simplified) and English interfaces:
-1. After starting, click the sidebar
-2. Select your language from the "Language" dropdown at the top
-3. Interface will automatically refresh to the selected language
+The application supports **Chinese (Simplified)** and **English** bilingual interface:
+1. After starting the app, find the **"语言/Language"** dropdown menu at the top of the left sidebar
+2. Select your preferred language
+3. The interface will automatically refresh and switch to the selected language
 
-For details, see [I18N_README.md](I18N_README.md)
+For detailed internationalization instructions, see: [I18N_README.md](I18N_README.md)
 
 ### 1. Prepare Data Files
 
-Place GPC data files in the specified directory
+#### GPC Data File Requirements:
+- Supported formats: `.txt`, `.csv` and other text files
+- Required data columns:
+  - Molecular weight data: Mn (Number average), Mw (Weight average), Mz (Z-average)
+  - Distribution index: PDI (Polydispersity index)
+  - Molecular weight distribution curve data
 
-Data files should contain the following columns:
-- Molecular weight related data (Mn, Mw, Mz, etc.)
-- Distribution data (PDI, etc.)
+#### DSC Data File Requirements:
+- Supported formats: `.txt` or `.rst` files exported from TA instruments
+- Files should contain:
+  - Heat Flow data
+  - Temperature data
+  - Time data
+  - Method information (for automatic cycle recognition)
 
 ### 2. Configure Parameters
 
-In the sidebar of the web interface, you can configure:
+The application provides rich configuration options in the sidebar of the web interface:
+
+#### GPC Analysis Configuration:
 
 **Basic Settings:**
-- Data directory path
-- Save file options
-- Generate image options
+- 📁 Data directory path
+- 💾 CSV file save options
+- 🖼️ Image generation and save options
 
 **Style Settings:**
-- Bar chart color
-- Molecular weight curve color
-- Bar width
-- Curve width
-- Axis width
+- 🎨 Bar chart color (Default: #002FA7)
+- 🎨 Molecular weight curve color (Default: #FF6A07)
+- 📏 Bar width
+- 📏 Curve line width
+- 📏 Axis thickness
 
 **Font Settings:**
-- Title font size
-- Axis font size
+- 📝 Title font size
+- 📝 Axis font size
 
 **Chart Options:**
-- Draw bar chart
-- Draw molecular weight curve
-- Generate data table
-- Use transparent background
+- ☑️ Draw bar chart
+- ☑️ Draw molecular weight curve
+- ☑️ Generate data table
+- ☑️ Use transparent background
 
-### 3. Generate Charts
+#### DSC Analysis Configuration:
 
-1. After setting parameters, click the "Run" button
-2. Program will automatically process all files in the data directory
-3. Generated images will be saved in the `datapath` directory
-4. Results can be previewed in the interface after processing
+**Basic Settings:**
+- 📁 DSC data directory path
+- 💾 Segmented data save options
+- 🖼️ Cycle comparison plot save options
 
-### 4. View Results
+**Analysis Parameters:**
+- 📊 Left and right boundary range (for peak display range)
+- 🔍 Peak detection parameters
 
-- Click "Open Output Folder" button to directly open the directory with saved images
-- All generated images will be displayed in the interface
+**Plot Options:**
+- ☑️ Save segmented data (CSV format)
+- ☑️ Draw segmented plots
+- ☑️ Draw cycle comparison plots
+- ☑️ Automatic peak centering display
 
-## 🔧 Configuration File
+**Style Settings:**
+- 🎨 Curve color
+- 📏 Line width
+- 📏 Axis thickness
+- 📝 Font size settings
 
-The program uses `setting/defaultSetting.ini` as the default configuration file, containing the following parameters:
+### 3. Run Analysis
+
+#### GPC Analysis Workflow:
+1. Select or enter data directory path in the sidebar
+2. Adjust parameters and style settings as needed
+3. Click the **"Start Processing"** or **"Run"** button
+4. Program will automatically process all data files in the directory
+5. Processing progress is displayed in real-time on the interface
+6. After completion, processing time and result preview are shown
+
+#### DSC Analysis Workflow:
+1. Switch to the **"DSC Analysis"** tab
+2. Select DSC data directory
+3. Configure analysis parameters (number of cycles, peak detection parameters, etc.)
+4. Click the **"Run"** button to start analysis
+5. The program will automatically:
+   - Recognize multi-cycle data
+   - Extract heat flow-temperature data for each cycle
+   - Save segmented data as CSV files
+   - Generate individual curve plots for each cycle
+   - Generate cycle comparison overlay plots
+
+### 4. View and Export Results
+
+#### Output File Locations:
+- **GPC Results:** 
+  - Images: `datapath/SampleName/` folder
+  - CSV data: `GPC_output/` folder
+  - Molecular weight summary: `Mw_output/` folder
+
+- **DSC Results:**
+  - Cycle data: `DSC_Cycle/CycleX/` folder (CSV format)
+  - Curve plots: `DSC_Pic/SampleName/` folder (PNG format)
+  - Cycle comparison plots: `result.png` in each Cycle folder
+
+#### Convenient Operations:
+- Click the **"Open Output Folder"** button to directly access the results directory
+- All generated images are previewed in real-time on the interface
+- Support viewing and downloading images directly in the browser
+
+## 🔧 Configuration File Description
+
+### GPC Configuration File
+
+The program uses `setting/defaultSetting.ini` as the default configuration file for GPC analysis:
 
 ```ini
 [DEFAULT]
-DataDir = datapath
-SaveFile = True
-BarWidth = 1.2
-LineWidth = 1.0
-AxisWidth = 1.0
-TitleFontSize = 20
-AxisFontSize = 14
-TransparentBack = True
-SavePicture = True
-DisplayPicture = False
-BarColor = #002FA7
-MwColor = #FF6A07
-DrawBar = True
-DrawMw = True
-DrawTable = True
+# Basic Settings
+DataDir = datapath                # Data directory
+SaveFile = True                   # Whether to save CSV files
+SavePicture = True                # Whether to save images
+DisplayPicture = False            # Whether to display images in interface
+
+# Graphic Styles
+BarColor = #002FA7                # Bar chart color (dark blue)
+MwColor = #FF6A07                 # Molecular weight curve color (orange)
+BarWidth = 1.2                    # Bar width
+LineWidth = 1.0                   # Curve line width
+AxisWidth = 1.0                   # Axis thickness
+
+# Font Settings
+TitleFontSize = 20                # Title font size
+AxisFontSize = 14                 # Axis font size
+
+# Chart Options
+DrawBar = True                    # Draw bar chart
+DrawMw = True                     # Draw molecular weight curve
+DrawTable = True                  # Generate data table
+TransparentBack = True            # Use transparent background
 ```
 
-You can modify the configuration file as needed or adjust parameters directly in the web interface.
+### DSC Configuration File
+
+The program uses `setting/defaultDSCSetting.ini` as the default configuration file for DSC analysis:
+
+```ini
+[DEFAULT]
+# Curve Styles
+curve_color = #002FA7             # Curve color
+line_width = 1.0                  # Line width
+axis_width = 1.0                  # Axis thickness
+
+# Font Settings
+title_font_size = 20              # Title font size
+axis_font_size = 14               # Axis font size
+
+# Graphic Options
+transparent_back = True           # Use transparent background
+```
+
+### Configuration Management
+
+- ✏️ Can directly edit INI files to modify default configurations
+- 💾 Can save modified parameters as new configuration schemes in the web interface
+- 📋 Support multiple configuration scheme management, can switch anytime
+- 🔄 Support deleting custom configurations, restoring default settings
 
 ## 📦 Packaging Instructions
 
@@ -181,7 +334,7 @@ The script will automatically:
 
 Generated file structure:
 ```
-GPCtoPic_Windows_Portable_v1.0/
+PolyAnalyzer_Windows_Portable_v1.0/
 ├── 启动应用.bat          # User double-click to start
 ├── python/               # Embedded Python environment
 ├── main.py              # Application code
@@ -214,10 +367,10 @@ chmod +x build.sh
 
 ```bash
 pip install pyinstaller
-pyinstaller GPCtoPic.spec
+pyinstaller PolyAnalyzer.spec
 ```
 
-Generated exe file located in `dist/GPCtoPic` directory.
+Generated exe file located in `dist/PolyAnalyzer` directory.
 
 **Notes:**
 - Large file size (300-500MB)
@@ -232,44 +385,60 @@ Generated exe file located in `dist/GPCtoPic` directory.
 | Single file needed | PyInstaller | Easy to distribute and manage |
 | Development/Testing | Source code | Flexible and convenient |
 
-## 📋 Dependencies
+## 📋 Main Dependencies
 
-- streamlit >= 1.20.0
-- numpy >= 1.20.0
-- pandas >= 1.3.0
-- matplotlib >= 3.5.0
-- plottable >= 0.1.0
-- openpyxl >= 3.0.0
+### Core Dependencies
+- **streamlit** >= 1.20.0 - Web interface framework
+- **numpy** >= 1.20.0 - Numerical computing
+- **pandas** >= 1.3.0 - Data processing
+- **matplotlib** >= 3.5.0 - Plotting
+
+### Functional Dependencies
+- **plottable** >= 0.1.0 - Table plotting
+- **scipy** >= 1.7.0 - Scientific computing (DSC peak detection)
+- **chardet** >= 4.0.0 - File encoding detection
+
+For complete dependency list, see [requirements.txt](requirements.txt)
 
 ## 🖥️ System Requirements
 
-- Python 3.8+
-- macOS / Windows / Linux
+### Running from Source
+- **Python Version:** 3.8 or higher
+- **Operating System:** Windows / macOS / Linux
+- **RAM:** At least 2GB
+- **Disk Space:** At least 500MB (including data files)
+
+### Windows Portable Version
+- **Operating System:** Windows 7 or higher
+- **RAM:** At least 2GB
+- **Disk Space:** At least 500MB (including program and data)
 
 ## 📝 Project Structure
 
 ```
-GPCtoPic/
-├── main.py                    # Main program file
-├── ui.py                      # Web interface
-├── i18n.py                    # Internationalization module
-├── run_main.py               # Startup script
-├── cnames.py                 # Chinese name mapping
-├── requirements.txt          # Python dependencies
-├── GPCtoPic.spec            # PyInstaller config
+PolyAnalyzer/
+├── main.py                    # Main program file (includes GPC/DSC/Mw analyzers)
+├── ui.py                      # Streamlit web interface
+├── i18n.py                    # Internationalization module (multi-language support)
+├── run_main.py               # Run startup script
+├── cnames.py                 # Color name mapping
+├── requirements.txt          # Python dependency list
+├── PolyAnalyzer.spec            # PyInstaller packaging config
 ├── package_windows.sh        # Windows portable packaging script
-├── build.sh                  # macOS/Linux PyInstaller script
-├── build.ps1                 # Windows PyInstaller script
-├── BUILD_README.md          # Packaging detailed instructions
+├── build.sh / build.ps1     # PyInstaller packaging scripts
+├── BUILD_README.md          # Detailed packaging documentation
 ├── I18N_README.md           # Internationalization documentation
-├── main.ico                  # Program icon
-├── sinopec.jpg              # Page icon
-├── setting/                  # Configuration directory
-│   ├── defaultSetting.ini   # Default settings
+├── OPTIMIZATION_REPORT.md   # Optimization report
+├── README.md / README_EN.md # Project documentation
+├── setting/                  # Configuration files directory
+│   ├── defaultSetting.ini   # GPC default configuration
+│   ├── defaultDSCSetting.ini # DSC default configuration
 │   └── language.json        # Language preference (auto-generated)
-├── datapath/                 # Data directory (input)
-├── GPC_output/              # GPC output directory
-├── Mw_output/               # Molecular weight output directory
+├── datapath/                 # GPC data files directory (input)
+├── GPC_output/              # GPC analysis results output
+├── Mw_output/               # Molecular weight summary output
+├── DSC_Cycle/               # DSC cycle data output
+├── DSC_Pic/                 # DSC graphics output
 └── logs/                     # Log files directory
 ```
 

@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
 PyInstaller spec 文件 - 用于优化打包体积
-执行: pyinstaller GPCtoPic.spec
+执行: pyinstaller PolyAnalyzer.spec
 """
 
 block_cipher = None
@@ -66,7 +66,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='GPCtoPic',
+    name='PolyAnalyzer',
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,  # 启用符号剥离(macOS/Linux)

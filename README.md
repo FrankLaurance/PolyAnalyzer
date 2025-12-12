@@ -1,168 +1,319 @@
-# GPCtoPic - GPC数据可视化工具
+# PolyAnalyzer - 高分子材料数据可视化工具
 
 [English](README_EN.md) | 中文
 
-一个用于处理和可视化GPC(凝胶渗透色谱)数据的Python工具，可以生成柱状图、分子量分布曲线和数据表格。
+一个专业的高分子材料数据分析与可视化工具，集成了GPC（凝胶渗透色谱）和DSC（差示扫描量热法）分析功能，为科研人员提供高效、直观的数据处理体验。
 
-## ✨ 功能特点
+## ✨ 核心功能
 
-- 📊 自动读取和处理GPC数据文件
-- 📈 生成精美的柱状图和分子量分布曲线
-- 📋 创建格式化的数据表格
-- 🎨 支持自定义颜色、字体大小等样式
-- 💾 批量导出高质量图片(PNG/PDF)
-- 🖥️ 基于Streamlit的Web界面，操作简单直观
-- 🌍 支持多语言界面（中文/English）
-- 📦 支持多种打包方式，满足不同需求
+### 📊 GPC 凝胶渗透色谱分析
+- 自动读取和处理GPC数据文件
+- 生成精美的柱状图和分子量分布曲线
+- 创建专业的分子量数据表格
+- 批量处理多个样品数据
+
+### 🔥 DSC 差示扫描量热法分析
+- 自动识别并解析DSC热流数据
+- 智能提取多循环测试数据
+- 绘制热流-温度曲线
+- 支持峰位自动识别和居中显示
+- 多循环数据对比分析
+- 数据分段保存和可视化
+
+### 🎨 通用特性
+- 支持自定义颜色、线宽、字体大小等样式
+- 批量导出高质量图片（PNG，300 DPI）
+- 基于Streamlit的现代化Web界面
+- 多语言界面支持（中文/English）
+- 灵活的配置管理系统
+- 完整的日志记录功能
+- 多种打包方式，满足不同部署需求
 
 ## 🚀 快速开始
 
-### 方式一：使用 Windows 便携版（推荐 - 无需安装Python）
+### 方式一：Windows 便携版（推荐 - 零门槛使用）
 
-**适合：完全不懂编程的用户**
+**适用对象：科研人员、实验室用户、无编程经验者**
 
-1. 下载 `GPCtoPic_Windows_Portable_vX.X.zip`
-2. 解压到任意位置
-3. 双击 `启动应用.bat`
-4. 浏览器自动打开，开始使用
+#### 使用步骤：
+1. 从 [Releases](https://github.com/FrankLaurance/PolyAnalyzer/releases) 下载最新的 `PolyAnalyzer_Windows_Portable_vX.X.X.zip`
+2. 解压到任意位置（建议路径不含中文和空格）
+3. 双击 `启动应用.bat` 或 `Start_App.bat`
+4. 浏览器自动打开应用界面，即可开始使用
 
-✅ 优点：
-- 无需安装任何软件
-- 解压即用，体积约 150-200MB
-- 支持读写本地文件
-- 删除文件夹即完成卸载
+#### 特点：
+- ✅ 完全绿色免安装，无需配置Python环境
+- ✅ 内置所有依赖，体积约 150-200MB
+- ✅ 支持完整的本地文件读写功能
+- ✅ 卸载只需删除文件夹
+- ✅ 支持离线使用，数据安全有保障
 
-### 方式二：直接运行Python脚本（开发者）
+### 方式二：从源码运行（开发者与技术用户）
 
-#### 1. 安装依赖
+**适用对象：开发者、需要定制功能、跨平台使用**
+
+#### 系统要求：
+- Python 3.8 或更高版本
+- pip 包管理器
+
+#### 安装步骤：
 
 ```bash
-# 克隆项目
-git clone https://github.com/FrankLaurance/GPCtoPic.git
-cd GPCtoPic
+# 1. 克隆项目仓库
+git clone https://github.com/FrankLaurance/PolyAnalyzer.git
+cd PolyAnalyzer
 
-# 创建虚拟环境（推荐）
+# 2. 创建虚拟环境（强烈推荐）
 python -m venv myenv
 
-# 激活虚拟环境
+# 3. 激活虚拟环境
 # macOS/Linux:
 source myenv/bin/activate
 # Windows:
 myenv\Scripts\activate
 
-# 安装依赖包
+# 4. 安装依赖包
 pip install -r requirements.txt
 ```
 
-#### 2. 运行程序
+#### 运行程序：
 
 ```bash
+# 方式1：使用 Streamlit 直接运行
 streamlit run main.py
+
+# 方式2：使用项目提供的运行脚本
+python run_main.py
 ```
 
 程序将自动在浏览器中打开，默认地址为 `http://localhost:8501`
 
-### 方式三：使用 PyInstaller 打包版本
+### 方式三：PyInstaller 单文件版本（需自行编译）
 
-**适合：需要单文件分发的场景**
+**适用对象：需要单文件分发、简化部署的场景**
 
-1. 下载 `GPCtoPic.exe`（从 Releases 页面）
-2. 双击运行即可
+#### 编译步骤：
 
-⚠️ 注意：
-- 文件较大（约 300-500MB）
-- 可能被杀毒软件误报
-- 首次启动较慢
+**前置要求：**
+```bash
+# 确保已安装项目依赖
+pip install -r requirements.txt
+```
 
-### 📦 打包方式对比
+**自动编译（推荐）：**
+```bash
+# macOS/Linux
+chmod +x build.sh
+./build.sh
 
-| 方式 | 体积 | 用户体验 | 适用场景 |
-|------|------|----------|----------|
-| **Windows 便携版** | ~150MB | ⭐⭐⭐⭐⭐ | 推荐给普通用户 |
-| **PyInstaller exe** | ~300-500MB | ⭐⭐⭐⭐ | 需要单文件分发 |
-| **源码运行** | ~10MB | ⭐⭐⭐ | 开发者和技术用户 |
+# Windows
+.\build.ps1
+```
+
+**手动编译：**
+```bash
+pip install pyinstaller
+pyinstaller PolyAnalyzer.spec
+```
+
+生成的 `PolyAnalyzer.exe` 位于 `dist/PolyAnalyzer/` 目录
+
+> 💡 **说明：** build脚本会自动安装PyInstaller，但不会安装项目依赖，请确保先执行 `pip install -r requirements.txt`
+
+#### 使用说明：
+1. 将生成的 exe 文件分发给用户
+2. 用户双击即可运行，无需安装
+
+#### 注意事项：
+- ⚠️ 文件体积较大（约 300-500MB），因包含完整运行环境
+- ⚠️ 首次启动需要解压缓存，启动时间约 10-30 秒
+- ⚠️ 部分杀毒软件可能误报，可添加信任或使用便携版
+- ℹ️ 详细打包说明请参阅 [BUILD_README.md](BUILD_README.md)
+
+### 📦 部署方式对比
+
+| 方式 | 体积 | 启动速度 | 用户体验 | 推荐人群 | 跨平台 |
+|------|------|---------|----------|----------|--------|
+| **Windows 便携版** | ~150MB | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 实验室用户、科研人员 | Windows |
+| **源码运行** | ~10MB | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 开发者、技术用户 | 全平台 |
+| **PyInstaller exe** | ~300-500MB | ⭐⭐⭐ | ⭐⭐⭐ | 需要单文件分发 | Windows |
 
 ## 📖 使用说明
 
 ### 0. 语言切换
 
-应用支持中文(简体)和英语界面：
-1. 启动应用后，点击左侧边栏
-2. 在顶部的"语言/Language"下拉菜单中选择您的语言
-3. 界面会自动刷新为所选语言
+应用支持**中文（简体）**和**English**双语界面：
+1. 启动应用后，在左侧边栏顶部找到 **"语言/Language"** 下拉菜单
+2. 选择您偏好的语言
+3. 界面将自动刷新并切换至所选语言
 
-详细说明请查看 [I18N_README.md](I18N_README.md)
+详细的国际化说明请参阅：[I18N_README.md](I18N_README.md)
 
 ### 1. 准备数据文件
 
-将GPC数据文件放在指定目录中
+#### GPC 数据文件要求：
+- 支持的格式：`.txt`、`.csv` 等文本文件
+- 必需的数据列：
+  - 分子量数据：Mn（数均分子量）、Mw（重均分子量）、Mz（Z均分子量）
+  - 分布指数：PDI（多分散性指数）
+  - 分子量分布曲线数据
 
-数据文件应包含以下列：
-- 分子量相关数据 (Mn, Mw, Mz等)
-- 分布数据 (PDI等)
+#### DSC 数据文件要求：
+- 支持的格式：TA仪器导出的 `.txt` 或 `.rst` 文件
+- 文件应包含：
+  - 热流（Heat Flow）数据
+  - 温度（Temperature）数据
+  - 时间（Time）数据
+  - 方法（Method）信息（用于自动识别循环）
 
 ### 2. 配置参数
 
-在Web界面的侧边栏中，您可以配置：
+应用提供了丰富的配置选项，在Web界面的侧边栏中可进行设置：
+
+#### GPC 分析配置：
 
 **基本设置：**
-- 数据目录路径
-- 保存文件选项
-- 生成图片选项
+- 📁 数据目录路径
+- 💾 CSV文件保存选项
+- 🖼️ 图片生成与保存选项
 
 **样式设置：**
-- 柱状图颜色
-- 分子量曲线颜色
-- 柱状图宽度
-- 曲线宽度
-- 坐标轴宽度
+- 🎨 柱状图颜色（默认：#002FA7）
+- 🎨 分子量曲线颜色（默认：#FF6A07）
+- 📏 柱状图宽度
+- 📏 曲线线宽
+- 📏 坐标轴粗细
 
 **字体设置：**
-- 标题字体大小
-- 坐标轴字体大小
+- 📝 标题字体大小
+- 📝 坐标轴字体大小
 
 **图表选项：**
-- 是否绘制柱状图
-- 是否绘制分子量曲线
-- 是否生成数据表格
-- 是否使用透明背景
+- ☑️ 绘制柱状图
+- ☑️ 绘制分子量曲线
+- ☑️ 生成数据表格
+- ☑️ 使用透明背景
 
-### 3. 生成图表
+#### DSC 分析配置：
 
-1. 设置好参数后，点击"开始处理"按钮
-2. 程序将自动处理数据目录中的所有文件
-3. 生成的图片将保存在 `datapath` 目录下
-4. 处理完成后可在界面中预览结果
+**基本设置：**
+- 📁 DSC数据目录路径
+- 💾 分段数据保存选项
+- 🖼️ 循环对比图保存选项
 
-### 4. 查看结果
+**分析参数：**
+- 📊 左右边界范围（用于峰位显示范围）
+- 🔍 峰检测参数
 
-- 点击"打开数据文件夹"按钮可直接打开保存图片的目录
-- 所有生成的图片都会在界面中展示预览
+**绘图选项：**
+- ☑️ 保存分段数据（CSV格式）
+- ☑️ 绘制分段图
+- ☑️ 绘制循环对比图
+- ☑️ 峰位自动居中显示
 
-## 🔧 配置文件
+**样式设置：**
+- 🎨 曲线颜色
+- 📏 线宽
+- 📏 坐标轴粗细
+- 📝 字体大小设置
 
-程序使用 `setting/defaultSetting.ini` 作为默认配置文件，包含以下参数：
+### 3. 运行分析
+
+#### GPC 分析流程：
+1. 在侧边栏中选择或输入数据目录路径
+2. 根据需要调整各项参数和样式设置
+3. 点击 **"开始处理"** 或 **"Run"** 按钮
+4. 程序将自动处理目录中的所有数据文件
+5. 处理进度会实时显示在界面上
+6. 完成后会显示处理时间和结果预览
+
+#### DSC 分析流程：
+1. 切换到 **"DSC分析"** 标签页
+2. 选择DSC数据目录
+3. 配置分析参数（循环数、峰检测参数等）
+4. 点击 **"运行"** 按钮开始分析
+5. 程序会自动：
+   - 识别多循环数据
+   - 提取各循环的热流-温度数据
+   - 保存分段数据为CSV文件
+   - 生成各循环的独立曲线图
+   - 生成循环对比叠加图
+
+### 4. 查看与导出结果
+
+#### 输出文件位置：
+- **GPC结果：** 
+  - 图片：`datapath/样品名称/` 文件夹
+  - CSV数据：`GPC_output/` 文件夹
+  - 分子量汇总：`Mw_output/` 文件夹
+
+- **DSC结果：**
+  - 循环数据：`DSC_Cycle/CycleX/` 文件夹（CSV格式）
+  - 曲线图：`DSC_Pic/样品名称/` 文件夹（PNG格式）
+  - 循环对比图：各Cycle文件夹下的 `result.png`
+
+#### 便捷操作：
+- 点击 **"打开输出文件夹"** 按钮可直接访问结果目录
+- 所有生成的图片都会在界面中实时预览
+- 支持在浏览器中直接查看和下载图片
+
+## 🔧 配置文件说明
+
+### GPC 配置文件
+
+程序使用 `setting/defaultSetting.ini` 作为GPC分析的默认配置文件：
 
 ```ini
 [DEFAULT]
-DataDir = datapath
-SaveFile = True
-BarWidth = 1.2
-LineWidth = 1.0
-AxisWidth = 1.0
-TitleFontSize = 20
-AxisFontSize = 14
-TransparentBack = True
-SavePicture = True
-DisplayPicture = False
-BarColor = #002FA7
-MwColor = #FF6A07
-DrawBar = True
-DrawMw = True
-DrawTable = True
+# 基本设置
+DataDir = datapath                # 数据目录
+SaveFile = True                   # 是否保存CSV文件
+SavePicture = True                # 是否保存图片
+DisplayPicture = False            # 是否在界面显示图片
+
+# 图形样式
+BarColor = #002FA7                # 柱状图颜色（深蓝色）
+MwColor = #FF6A07                 # 分子量曲线颜色（橙色）
+BarWidth = 1.2                    # 柱状图宽度
+LineWidth = 1.0                   # 曲线线宽
+AxisWidth = 1.0                   # 坐标轴粗细
+
+# 字体设置
+TitleFontSize = 20                # 标题字体大小
+AxisFontSize = 14                 # 坐标轴字体大小
+
+# 图表选项
+DrawBar = True                    # 绘制柱状图
+DrawMw = True                     # 绘制分子量曲线
+DrawTable = True                  # 生成数据表格
+TransparentBack = True            # 使用透明背景
 ```
 
-您可以根据需要修改配置文件，或在Web界面中直接调整参数。
+### DSC 配置文件
+
+程序使用 `setting/defaultDSCSetting.ini` 作为DSC分析的默认配置文件：
+
+```ini
+[DEFAULT]
+# 曲线样式
+curve_color = #002FA7             # 曲线颜色
+line_width = 1.0                  # 线宽
+axis_width = 1.0                  # 坐标轴粗细
+
+# 字体设置
+title_font_size = 20              # 标题字体大小
+axis_font_size = 14               # 坐标轴字体大小
+
+# 图形选项
+transparent_back = True           # 使用透明背景
+```
+
+### 配置管理
+
+- ✏️ 可直接编辑INI文件修改默认配置
+- 💾 在Web界面中修改参数后可保存为新的配置方案
+- 📋 支持多配置方案管理，可随时切换
+- 🔄 支持删除自定义配置，恢复默认设置
 
 ## 📦 打包说明
 
@@ -183,7 +334,7 @@ bash package_windows.sh
 
 生成的文件结构：
 ```
-GPCtoPic_Windows_Portable_v1.0/
+PolyAnalyzer_Windows_Portable_v1.0/
 ├── 启动应用.bat          # 用户双击启动
 ├── python/               # 内嵌 Python 环境
 ├── main.py              # 应用代码
@@ -216,10 +367,10 @@ chmod +x build.sh
 
 ```bash
 pip install pyinstaller
-pyinstaller GPCtoPic.spec
+pyinstaller PolyAnalyzer.spec
 ```
 
-生成的 exe 文件位于 `dist/GPCtoPic` 目录。
+生成的 exe 文件位于 `dist/PolyAnalyzer` 目录。
 
 **注意事项：**
 - 文件较大（300-500MB）
@@ -234,44 +385,60 @@ pyinstaller GPCtoPic.spec
 | 需要单文件 | PyInstaller | 便于分发和管理 |
 | 开发测试 | 源码运行 | 灵活方便 |
 
-## 📋 依赖包
+## 📋 主要依赖包
 
-- streamlit >= 1.20.0
-- numpy >= 1.20.0
-- pandas >= 1.3.0
-- matplotlib >= 3.5.0
-- plottable >= 0.1.0
-- openpyxl >= 3.0.0
+### 核心依赖
+- **streamlit** >= 1.20.0 - Web界面框架
+- **numpy** >= 1.20.0 - 数值计算
+- **pandas** >= 1.3.0 - 数据处理
+- **matplotlib** >= 3.5.0 - 图形绘制
+
+### 功能依赖
+- **plottable** >= 0.1.0 - 表格绘制
+- **scipy** >= 1.7.0 - 科学计算（DSC峰检测）
+- **chardet** >= 4.0.0 - 文件编码检测
+
+完整依赖列表请查看 [requirements.txt](requirements.txt)
 
 ## 🖥️ 系统要求
 
-- Python 3.8+
-- macOS / Windows / Linux
+### 源码运行
+- **Python版本：** 3.8 或更高
+- **操作系统：** Windows / macOS / Linux
+- **内存：** 至少 2GB RAM
+- **磁盘空间：** 至少 500MB（包含数据文件）
+
+### Windows 便携版
+- **操作系统：** Windows 7 或更高
+- **内存：** 至少 2GB RAM
+- **磁盘空间：** 至少 500MB（包含程序和数据）
 
 ## 📝 项目结构
 
 ```
-GPCtoPic/
-├── main.py                    # 主程序文件
-├── ui.py                      # Web界面
-├── i18n.py                    # 国际化模块
+PolyAnalyzer/
+├── main.py                    # 主程序文件（包含GPC/DSC/Mw分析器）
+├── ui.py                      # Streamlit Web界面
+├── i18n.py                    # 国际化模块（多语言支持）
 ├── run_main.py               # 运行启动脚本
-├── cnames.py                 # 中文名称映射
-├── requirements.txt          # Python依赖
-├── GPCtoPic.spec            # PyInstaller配置文件
+├── cnames.py                 # 颜色名称映射
+├── requirements.txt          # Python依赖包列表
+├── PolyAnalyzer.spec            # PyInstaller打包配置文件
 ├── package_windows.sh        # Windows便携版打包脚本
-├── build.sh                  # macOS/Linux PyInstaller打包脚本
-├── build.ps1                 # Windows PyInstaller打包脚本
-├── BUILD_README.md          # 打包详细说明
+├── build.sh / build.ps1     # PyInstaller打包脚本
+├── BUILD_README.md          # 打包详细说明文档
 ├── I18N_README.md           # 国际化说明文档
-├── main.ico                  # 程序图标
-├── sinopec.jpg              # 页面图标
+├── OPTIMIZATION_REPORT.md   # 优化报告
+├── README.md / README_EN.md # 项目说明文档
 ├── setting/                  # 配置文件目录
-│   ├── defaultSetting.ini   # 默认设置
+│   ├── defaultSetting.ini   # GPC默认配置
+│   ├── defaultDSCSetting.ini # DSC默认配置
 │   └── language.json        # 语言偏好（自动生成）
-├── datapath/                 # 数据文件目录（输入）
-├── GPC_output/              # GPC输出目录
-├── Mw_output/               # 分子量输出目录
+├── datapath/                 # GPC数据文件目录（输入）
+├── GPC_output/              # GPC分析结果输出
+├── Mw_output/               # 分子量汇总输出
+├── DSC_Cycle/               # DSC循环数据输出
+├── DSC_Pic/                 # DSC图形输出
 └── logs/                     # 日志文件目录
 ```
 

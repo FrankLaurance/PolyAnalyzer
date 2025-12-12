@@ -3,7 +3,7 @@
 # 使用方法: chmod +x build.sh && ./build.sh
 
 echo "================================"
-echo "GPCtoPic PyInstaller 打包脚本"
+echo "PolyAnalyzer PyInstaller 打包脚本"
 echo "================================"
 
 # 1. 清理之前的构建
@@ -36,29 +36,29 @@ if [ $? -ne 0 ]; then
     echo "警告: UPX 未安装,将跳过压缩步骤"
     echo "可通过 'brew install upx' 安装以减少体积"
     # 临时禁用 UPX
-    sed -i.bak 's/upx=True/upx=False/' GPCtoPic.spec
+    sed -i.bak 's/upx=True/upx=False/' PolyAnalyzer.spec
 else
     echo "UPX 已安装"
 fi
 
 # 5. 执行打包
 echo "步骤 5/6: 开始打包..."
-pyinstaller GPCtoPic.spec --clean
+pyinstaller PolyAnalyzer.spec --clean
 
 # 6. 显示结果
 echo "步骤 6/6: 打包完成!"
-if [ -f "dist/GPCtoPic" ]; then
+if [ -f "dist/PolyAnalyzer" ]; then
     # 重命名为带版本号的文件
-    mv "dist/GPCtoPic" "dist/GPCtoPic_v${VERSION}"
+    mv "dist/PolyAnalyzer" "dist/PolyAnalyzer_v${VERSION}"
     
     echo "================================"
     echo "✅ 打包成功!"
-    echo "可执行文件: dist/GPCtoPic_v${VERSION}"
-    echo "文件大小: $(du -h "dist/GPCtoPic_v${VERSION}" | cut -f1)"
+    echo "可执行文件: dist/PolyAnalyzer_v${VERSION}"
+    echo "文件大小: $(du -h "dist/PolyAnalyzer_v${VERSION}" | cut -f1)"
     echo "================================"
     echo "运行方法:"
     echo "  cd dist"
-    echo "  ./GPCtoPic_v${VERSION}"
+    echo "  ./PolyAnalyzer_v${VERSION}"
     echo "================================"
 else
     echo "❌ 打包失败,请检查错误信息"

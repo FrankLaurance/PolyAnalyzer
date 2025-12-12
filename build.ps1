@@ -2,7 +2,7 @@
 # 使用方法: 在 PowerShell 中运行 .\build.ps1
 
 Write-Host "================================"
-Write-Host "GPCtoPic PyInstaller 打包脚本"
+Write-Host "PolyAnalyzer PyInstaller 打包脚本"
 Write-Host "================================"
 
 # 1. 清理之前的构建
@@ -42,21 +42,21 @@ if (-not $upxCheck) {
     Write-Host "警告: UPX 未安装,将跳过压缩步骤"
     Write-Host "可从 https://upx.github.io/ 下载以减少体积"
     # 临时禁用 UPX
-    (Get-Content GPCtoPic.spec) -replace 'upx=True', 'upx=False' | Set-Content GPCtoPic.spec
+    (Get-Content PolyAnalyzer.spec) -replace 'upx=True', 'upx=False' | Set-Content PolyAnalyzer.spec
 } else {
     Write-Host "UPX 已安装"
 }
 
 # 5. 执行打包
 Write-Host "步骤 5/6: 开始打包..."
-pyinstaller GPCtoPic.spec --clean
+pyinstaller PolyAnalyzer.spec --clean
 
 # 6. 显示结果
 Write-Host "步骤 6/6: 打包完成!"
-if (Test-Path "dist\GPCtoPic.exe") {
+if (Test-Path "dist\PolyAnalyzer.exe") {
     # 重命名为带版本号的文件
-    $newName = "GPCtoPic_v$VERSION.exe"
-    Rename-Item -Path "dist\GPCtoPic.exe" -NewName $newName
+    $newName = "PolyAnalyzer_v$VERSION.exe"
+    Rename-Item -Path "dist\PolyAnalyzer.exe" -NewName $newName
     
     Write-Host "================================"
     Write-Host "✅ 打包成功!"

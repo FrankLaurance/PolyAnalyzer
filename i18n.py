@@ -103,7 +103,7 @@ TRANSLATIONS = {
         "cannot_open_folder": "无法打开文件夹: {}",
         
         # 联系信息
-        "contact_info": "GitHub: https://github.com/FrankLaurance/GPCtoPic",
+        "contact_info": "GitHub: https://github.com/FrankLaurance/PolyAnalyzer",
     },
     
     "en_US": {
@@ -194,7 +194,7 @@ TRANSLATIONS = {
         "cannot_open_folder": "Cannot open folder: {}",
         
         # Contact Info
-        "contact_info": "GitHub: https://github.com/FrankLaurance/GPCtoPic",
+        "contact_info": "GitHub: https://github.com/FrankLaurance/PolyAnalyzer",
     }
 }
 

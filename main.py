@@ -22,7 +22,7 @@ import chardet
 os.environ['MPLBACKEND'] = 'Agg'
 
 # 常量定义 - 默认设置
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 DEFAULT_BAR_COLOR = "#002FA7"
 DEFAULT_MW_COLOR = "#FF6A07"
 DEFAULT_SETTING_NAME = "defaultSetting.ini"
@@ -57,7 +57,7 @@ BAR_POSITION_WEIGHT_RIGHT = 0.25  # 柱状图位置右权重
 class Logger:
     """日志管理器 - 提供结构化日志记录功能"""
     
-    def __init__(self, name: str = "GPCtoPic", level: int = logging.INFO):
+    def __init__(self, name: str = "PolyAnalyzer", level: int = logging.INFO):
         """初始化日志器
         
         Args:
