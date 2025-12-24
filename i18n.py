@@ -17,7 +17,7 @@ LANGUAGES = {
 TRANSLATIONS = {
     "zh_CN": {
         # 通用
-        "app_title": "GPC数据可视化工具",
+        "app_title": "Polymer Analyzer",
         "language": "语言",
         "save": "保存",
         "cancel": "取消",
@@ -108,7 +108,7 @@ TRANSLATIONS = {
     
     "en_US": {
         # Common
-        "app_title": "GPC Data Visualization Tool",
+        "app_title": "Polymer Analyzer",
         "language": "Language",
         "save": "Save",
         "cancel": "Cancel",
