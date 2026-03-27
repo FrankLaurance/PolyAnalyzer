@@ -1,36 +1,49 @@
-# macOS
-.DS_Store
-
-# Python
+# Dependencies
+node_modules/
+python/__pycache__/
+python/**/__pycache__/
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Virtual Environment
+# Build outputs
+dist/
+build/
+src-tauri/target/
+python/dist/
+python/build/
+*.spec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.*
 myenv/
 venv/
 env/
 .venv/
+*.egg-info/
 
-# Distribution / Packaging
-dist/
-build/
-
-# Data files - GPC analysis data
-*.rst
-datapath/*.rst
-datapath/*.txt
-
-
-# Output directories
-Mw_output/
-GPC_output/
-DSC_Cycle/
-DSC_Pic/
-
-# Logs
+# Runtime outputs (created by app)
 logs/
 *.log
+DSC_Cycle/
+DSC_Pic/
+GPC_output/
+Mw_output/
 
-# Windows Portable Build
-dist_portable_windows/
+# Tauri
+src-tauri/gen/
+
+# Data files
+datapath/*.rst
+datapath/*.txt
