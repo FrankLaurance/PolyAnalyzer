@@ -339,7 +339,10 @@ class BaseAnalyzer:
         info_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
         self.rootdir: str = os.path.dirname(os.path.abspath(__file__))
-        self.data_path: str = os.path.join(self.rootdir, "datapath")
+        if datadir:
+            self.data_path: str = os.path.abspath(datadir)
+        else:
+            self.data_path: str = os.path.join(self.rootdir, "datapath")
         self._cached_file_list: Optional[List[str]] = None
         self.lines: List[str] = []
         self.filename: str = ""

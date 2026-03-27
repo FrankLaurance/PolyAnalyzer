@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Input,
@@ -24,9 +24,9 @@ import SettingsPanel from "../common/SettingsPanel";
 
 export default function DscPanel() {
   const { t } = useTranslation();
-  const { sendRequest } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge();
   const analyzer = useAnalysisStore((s) => s.analyzers.dsc);
-  const { setRunning, setResult, reset } = useAnalysisStore();
+  const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
   const { savedSettings, loadSettings, saveSettings, deleteSettings } =
     useSettingsStore();
 
@@ -41,6 +41,12 @@ export default function DscPanel() {
   const [leftBoundary, setLeftBoundary] = useState(0);
   const [rightBoundary, setRightBoundary] = useState(3);
   const [currentSetting, setCurrentSetting] = useState<string>();
+
+  useEffect(() => {
+    if (analyzer.running) {
+      setProgress("dsc", lastProgress.progress * 100, lastProgress.message);
+    }
+  }, [analyzer.running, lastProgress, setProgress]);
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
@@ -57,17 +63,17 @@ export default function DscPanel() {
     reset("dsc");
     setRunning("dsc", true);
     try {
-      const result = await sendRequest("run_dsc", {
-        folder: folderPath,
-        save_segment_data: saveSegmentData,
-        draw_segment_curve: drawSegmentCurve,
-        draw_cycle_comparison: drawCycleComparison,
-        display_comparison: displayComparison,
-        save_comparison: saveComparison,
+      const result = await sendRequest("dsc.analyze", {
+        datadir: folderPath,
+        save_seg_mode: saveSegmentData,
+        draw_seg_mode: drawSegmentCurve,
+        draw_cycle: drawCycleComparison,
+        display_pic: displayComparison,
+        save_cycle_pic: saveComparison,
         peaks_upward: peaksUpward,
         center_peak: centerPeak,
-        left_boundary: leftBoundary,
-        right_boundary: rightBoundary,
+        left_length: leftBoundary,
+        right_length: rightBoundary,
       });
       setResult("dsc", {
         success: true,

@@ -52,7 +52,7 @@ class GPCAnalyzer(BaseAnalyzer):
         self.save_figure_file_gpc: bool = save_figure_file_gpc
 
         # 画图颜色库
-        from cnames import clist
+        from .cnames import clist
         self.color_list: list = clist
 
     # ------------------------------------------------------------------

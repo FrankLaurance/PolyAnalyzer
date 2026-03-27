@@ -34,7 +34,7 @@ METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 
-type MethodHandler = Callable[[dict[str, Any]], Any]
+MethodHandler = Callable[[dict[str, Any]], Any]
 
 # Root directory for analyzers (same as BaseAnalyzer.rootdir)
 _ROOT_DIR = os.path.dirname(os.path.abspath(__file__))

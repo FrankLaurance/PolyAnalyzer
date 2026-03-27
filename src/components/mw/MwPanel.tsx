@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Input,
@@ -29,9 +29,9 @@ import SettingsPanel from "../common/SettingsPanel";
 
 export default function MwPanel() {
   const { t } = useTranslation();
-  const { sendRequest } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge();
   const analyzer = useAnalysisStore((s) => s.analyzers.mw);
-  const { setRunning, setResult, reset } = useAnalysisStore();
+  const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
   const {
     analyzerSettings,
     updateAnalyzerSettings,
@@ -50,6 +50,12 @@ export default function MwPanel() {
   const [newPosition, setNewPosition] = useState<number | null>(null);
   const [currentSetting, setCurrentSetting] = useState<string>();
 
+  useEffect(() => {
+    if (analyzer.running) {
+      setProgress("mw", lastProgress.progress * 100, lastProgress.message);
+    }
+  }, [analyzer.running, lastProgress, setProgress]);
+
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
@@ -60,10 +66,10 @@ export default function MwPanel() {
 
   const loadFiles = async (path: string) => {
     try {
-      const result = (await sendRequest("list_files", {
-        path,
-        type: "mw",
-      })) as string[];
+      const res = (await sendRequest("mw.list_files", {
+        datadir: path,
+      })) as { files: string[] };
+      const result = res?.files;
       setFileList(result ?? []);
       setSelectedFiles(result ?? []);
     } catch {
@@ -94,13 +100,23 @@ export default function MwPanel() {
     reset("mw");
     setRunning("mw", true);
     try {
-      const result = await sendRequest("run_mw", {
-        folder: folderPath,
-        files: selectedFiles,
-        save_image: saveImage,
-        display_image: displayImage,
-        split_positions: splitPositions,
-        settings: analyzerSettings,
+      const result = await sendRequest("mw.analyze", {
+        datadir: folderPath,
+        selected_files: selectedFiles,
+        save_picture: saveImage,
+        display_picture: displayImage,
+        segmentpos: splitPositions,
+        bar_color: analyzerSettings.barColor,
+        mw_color: analyzerSettings.mwColor,
+        bar_width: analyzerSettings.barWidth,
+        line_width: analyzerSettings.lineWidth,
+        axis_width: analyzerSettings.axisWidth,
+        title_font_size: analyzerSettings.titleFontSize,
+        axis_font_size: analyzerSettings.axisFontSize,
+        transparent_back: analyzerSettings.transparentBackground,
+        draw_bar: analyzerSettings.drawBar,
+        draw_mw: analyzerSettings.drawMw,
+        draw_table: analyzerSettings.drawTable,
       });
       setResult("mw", {
         success: true,

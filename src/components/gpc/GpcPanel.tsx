@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Button,
   Input,
@@ -24,9 +24,9 @@ import SettingsPanel from "../common/SettingsPanel";
 
 export default function GpcPanel() {
   const { t } = useTranslation();
-  const { sendRequest } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge();
   const analyzer = useAnalysisStore((s) => s.analyzers.gpc);
-  const { setRunning, setResult, reset } = useAnalysisStore();
+  const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
   const { savedSettings, loadSettings, saveSettings, deleteSettings } =
     useSettingsStore();
 
@@ -42,6 +42,12 @@ export default function GpcPanel() {
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [currentSetting, setCurrentSetting] = useState<string>();
 
+  useEffect(() => {
+    if (analyzer.running) {
+      setProgress("gpc", lastProgress.progress * 100, lastProgress.message);
+    }
+  }, [analyzer.running, lastProgress, setProgress]);
+
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
@@ -52,10 +58,10 @@ export default function GpcPanel() {
 
   const loadFiles = async (path: string) => {
     try {
-      const result = (await sendRequest("list_files", {
-        path,
-        type: "gpc",
-      })) as string[];
+      const res = (await sendRequest("gpc.list_files", {
+        datadir: path,
+      })) as { files: string[] };
+      const result = res?.files;
       setFileList(result ?? []);
       setSelectedFiles(result ?? []);
     } catch {
@@ -71,14 +77,14 @@ export default function GpcPanel() {
     reset("gpc");
     setRunning("gpc", true);
     try {
-      const result = await sendRequest("run_gpc", {
-        folder: folderPath,
+      const result = await sendRequest("gpc.analyze", {
+        datadir: folderPath,
         output_filename: outputFilename,
-        files: selectPartial ? selectedFiles : undefined,
-        save_sample_info: saveSampleInfo,
-        save_image: saveImage,
-        display_image: displayImage,
-        save_plot_data: savePlotData,
+        selected_files: selectPartial ? selectedFiles : undefined,
+        save_file: saveSampleInfo,
+        save_picture: saveImage,
+        display_mode: displayImage,
+        save_figure_file_gpc: savePlotData,
         confirm_overwrite: confirmOverwrite,
       });
       setResult("gpc", {
