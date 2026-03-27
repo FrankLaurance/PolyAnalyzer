@@ -76,7 +76,7 @@ export function usePythonBridge() {
     if (spawnedRef.current && childRef.current) return;
     spawnedRef.current = true;
 
-    const cmd = Command.sidecar("binaries/python-sidecar");
+    const cmd = Command.sidecar("binaries/polyanalyzer-engine");
 
     cmd.stdout.on("data", (data: string) => {
       bufferRef.current += data;
