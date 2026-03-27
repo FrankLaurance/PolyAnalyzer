@@ -1,5 +1,3 @@
-use tauri::Manager;
-
 #[tauri::command]
 async fn open_folder(path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
