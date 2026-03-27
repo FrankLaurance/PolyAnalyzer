@@ -35,7 +35,7 @@ function App() {
             size="large"
           />
         </Content>
-        <Sider className="app-sider" width={240} theme="light">
+        <Sider className="app-sider" width={240} theme="light" style={{ background: 'var(--color-surface)' }}>
           <div className="help-panel">
             <Typography.Title level={5}>{t("help")}</Typography.Title>
             <Paragraph type="secondary">{t("contact_info")}</Paragraph>

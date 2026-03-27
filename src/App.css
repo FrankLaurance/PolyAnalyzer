@@ -183,13 +183,84 @@ body {
 }
 
 /* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-bg: #141414;
-    --color-surface: #1f1f1f;
-    --color-text: #e8e8e8;
-    --color-text-secondary: #8c8c8c;
-    --color-border: #303030;
-    --shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  }
+[data-theme="dark"] {
+  --color-bg: #141414;
+  --color-surface: #1f1f1f;
+  --color-text: #e8e8e8;
+  --color-text-secondary: #a0a0a0;
+  --color-border: #303030;
+  --shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] .app-layout,
+[data-theme="dark"] .app-body,
+[data-theme="dark"] .app-content {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .app-header {
+  background: var(--color-surface);
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="dark"] .app-header-title {
+  color: #4096ff;
+}
+
+[data-theme="dark"] .app-sider {
+  background: var(--color-surface) !important;
+  border-left-color: var(--color-border);
+}
+
+[data-theme="dark"] .panel-section {
+  background: var(--color-surface);
+}
+
+[data-theme="dark"] .panel-section-title {
+  color: var(--color-text);
+}
+
+[data-theme="dark"] .slider-row label,
+[data-theme="dark"] .color-row label {
+  color: var(--color-text-secondary);
+}
+
+[data-theme="dark"] .help-panel,
+[data-theme="dark"] .help-panel h5 {
+  color: var(--color-text);
+}
+
+/* Force Ant Design components in dark mode */
+[data-theme="dark"] .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background: var(--color-bg);
+}
+
+[data-theme="dark"] .ant-collapse {
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .ant-collapse > .ant-collapse-item {
+  border-color: var(--color-border);
+}
+
+[data-theme="dark"] .ant-input,
+[data-theme="dark"] .ant-input-number,
+[data-theme="dark"] .ant-select-selector,
+[data-theme="dark"] .ant-picker {
+  background: #2a2a2a !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+[data-theme="dark"] .ant-checkbox-wrapper,
+[data-theme="dark"] .ant-radio-wrapper {
+  color: var(--color-text);
 }

@@ -37,9 +37,5 @@
       "binaries/polyanalyzer-engine"
     ]
   },
-  "plugins": {
-    "shell": {
-      "sidecar": true
-    }
-  }
+  "plugins": {}
 }
