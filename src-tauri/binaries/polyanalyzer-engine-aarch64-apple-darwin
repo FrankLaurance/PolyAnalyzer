@@ -1,2 +1,12 @@
 #!/bin/sh
-cd "$(dirname "$0")/../../python" && exec python3 main.py
+# Resolve project root by walking up until python/main.py is found
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DIR="$SCRIPT_DIR"
+while [ "$DIR" != "/" ]; do
+  if [ -f "$DIR/python/main.py" ]; then
+    cd "$DIR/python" && exec python3 main.py
+  fi
+  DIR="$(dirname "$DIR")"
+done
+echo "Cannot find python/main.py" >&2
+exit 1

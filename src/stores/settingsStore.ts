@@ -18,18 +18,18 @@ export interface AnalyzerSettings {
 }
 
 export const defaultAnalyzerSettings: AnalyzerSettings = {
-  barColor: "#4096ff",
-  mwColor: "#ff4d4f",
-  curveColor: "#52c41a",
-  transparentBackground: false,
+  barColor: "#002FA7",
+  mwColor: "#FF6A07",
+  curveColor: "#002FA7",
+  transparentBackground: true,
   drawBar: true,
   drawMw: true,
   drawTable: true,
-  barWidth: 0.8,
-  lineWidth: 1.5,
+  barWidth: 1.2,
+  lineWidth: 1.0,
   axisWidth: 1.0,
-  titleFontSize: 14,
-  axisFontSize: 12,
+  titleFontSize: 20,
+  axisFontSize: 14,
 };
 
 interface SettingsState {

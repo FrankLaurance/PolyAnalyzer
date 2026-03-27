@@ -5,6 +5,7 @@ import {
   Checkbox,
   Collapse,
   Slider,
+  ColorPicker,
   Space,
   message,
 } from "antd";
@@ -27,8 +28,14 @@ export default function DscPanel() {
   const { sendRequest, lastProgress } = usePythonBridge();
   const analyzer = useAnalysisStore((s) => s.analyzers.dsc);
   const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
-  const { savedSettings, loadSettings, saveSettings, deleteSettings } =
-    useSettingsStore();
+  const {
+    analyzerSettings,
+    updateAnalyzerSettings,
+    savedSettings,
+    loadSettings,
+    saveSettings,
+    deleteSettings,
+  } = useSettingsStore();
 
   const [folderPath, setFolderPath] = useState("");
   const [saveSegmentData, setSaveSegmentData] = useState(true);
@@ -38,8 +45,8 @@ export default function DscPanel() {
   const [saveComparison, setSaveComparison] = useState(true);
   const [peaksUpward, setPeaksUpward] = useState(false);
   const [centerPeak, setCenterPeak] = useState(false);
-  const [leftBoundary, setLeftBoundary] = useState(0);
-  const [rightBoundary, setRightBoundary] = useState(3);
+  const [leftBoundary, setLeftBoundary] = useState(1.9);
+  const [rightBoundary, setRightBoundary] = useState(1.9);
   const [currentSetting, setCurrentSetting] = useState<string>();
 
   useEffect(() => {
@@ -47,6 +54,16 @@ export default function DscPanel() {
       setProgress("dsc", lastProgress.progress * 100, lastProgress.message);
     }
   }, [analyzer.running, lastProgress, setProgress]);
+
+  useEffect(() => {
+    sendRequest("system.get_default_datapath", {}).then((res) => {
+      const dp = (res as { datapath: string })?.datapath;
+      if (dp) {
+        setFolderPath(dp);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
@@ -74,6 +91,12 @@ export default function DscPanel() {
         center_peak: centerPeak,
         left_length: leftBoundary,
         right_length: rightBoundary,
+        curve_color: analyzerSettings.curveColor,
+        line_width: analyzerSettings.lineWidth,
+        axis_width: analyzerSettings.axisWidth,
+        title_font_size: analyzerSettings.titleFontSize,
+        axis_font_size: analyzerSettings.axisFontSize,
+        transparent_back: analyzerSettings.transparentBackground,
       });
       setResult("dsc", {
         success: true,
@@ -114,7 +137,7 @@ export default function DscPanel() {
         </div>
       </div>
 
-      {/* Options */}
+      {/* Options — with dependency logic matching original */}
       <div className="panel-section">
         <div className="checkbox-group">
           <Checkbox
@@ -131,18 +154,21 @@ export default function DscPanel() {
           </Checkbox>
           <Checkbox
             checked={drawCycleComparison}
+            disabled={!saveSegmentData}
             onChange={(e) => setDrawCycleComparison(e.target.checked)}
           >
             {t("draw_cycle")}
           </Checkbox>
           <Checkbox
             checked={displayComparison}
+            disabled={!saveSegmentData || !drawCycleComparison}
             onChange={(e) => setDisplayComparison(e.target.checked)}
           >
             {t("display_cycle")}
           </Checkbox>
           <Checkbox
             checked={saveComparison}
+            disabled={!saveSegmentData || !drawCycleComparison}
             onChange={(e) => setSaveComparison(e.target.checked)}
           >
             {t("save_cycle")}
@@ -187,6 +213,88 @@ export default function DscPanel() {
           <span style={{ minWidth: 36 }}>{rightBoundary}</span>
         </div>
       </div>
+
+      {/* Plot settings */}
+      <Collapse
+        className="settings-collapse"
+        items={[
+          {
+            key: "plot",
+            label: t("plot_settings"),
+            children: (
+              <div>
+                <div className="checkbox-group" style={{ marginBottom: 16 }}>
+                  <Checkbox
+                    checked={analyzerSettings.transparentBackground}
+                    onChange={(e) =>
+                      updateAnalyzerSettings({
+                        transparentBackground: e.target.checked,
+                      })
+                    }
+                  >
+                    {t("transparent_background")}
+                  </Checkbox>
+                </div>
+
+                <div className="color-row">
+                  <label>{t("curve_color")}:</label>
+                  <ColorPicker
+                    value={analyzerSettings.curveColor}
+                    onChange={(c) =>
+                      updateAnalyzerSettings({ curveColor: c.toHexString() })
+                    }
+                  />
+                </div>
+
+                <div className="slider-row">
+                  <label>{t("line_width")}:</label>
+                  <Slider
+                    min={0.2}
+                    max={3.0}
+                    step={0.1}
+                    value={analyzerSettings.lineWidth}
+                    onChange={(v) => updateAnalyzerSettings({ lineWidth: v })}
+                  />
+                </div>
+                <div className="slider-row">
+                  <label>{t("axis_width")}:</label>
+                  <Slider
+                    min={0.5}
+                    max={3.0}
+                    step={0.1}
+                    value={analyzerSettings.axisWidth}
+                    onChange={(v) => updateAnalyzerSettings({ axisWidth: v })}
+                  />
+                </div>
+                <div className="slider-row">
+                  <label>{t("title_font_size")}:</label>
+                  <Slider
+                    min={10}
+                    max={28}
+                    step={1}
+                    value={analyzerSettings.titleFontSize}
+                    onChange={(v) =>
+                      updateAnalyzerSettings({ titleFontSize: v })
+                    }
+                  />
+                </div>
+                <div className="slider-row">
+                  <label>{t("axis_font_size")}:</label>
+                  <Slider
+                    min={8}
+                    max={24}
+                    step={1}
+                    value={analyzerSettings.axisFontSize}
+                    onChange={(v) =>
+                      updateAnalyzerSettings({ axisFontSize: v })
+                    }
+                  />
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {/* Actions */}
       <div className="panel-section">

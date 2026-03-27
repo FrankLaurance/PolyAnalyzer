@@ -48,6 +48,17 @@ export default function GpcPanel() {
     }
   }, [analyzer.running, lastProgress, setProgress]);
 
+  useEffect(() => {
+    sendRequest("system.get_default_datapath", {}).then((res) => {
+      const dp = (res as { datapath: string })?.datapath;
+      if (dp) {
+        setFolderPath(dp);
+        loadFiles(dp);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {

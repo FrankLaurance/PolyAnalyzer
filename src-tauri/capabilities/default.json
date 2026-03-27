@@ -6,9 +6,15 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "shell:allow-spawn",
-    "shell:allow-stdin-write",
-    "shell:allow-kill",
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "binaries/polyanalyzer-engine",
+          "sidecar": true
+        }
+      ]
+    },
     {
       "identifier": "shell:allow-execute",
       "allow": [
@@ -18,6 +24,8 @@
         }
       ]
     },
+    "shell:allow-stdin-write",
+    "shell:allow-kill",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",

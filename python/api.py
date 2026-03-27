@@ -360,6 +360,13 @@ def _system_clean_output(params: dict[str, Any]) -> Any:
     return {"success": True, "cleaned": cleaned}
 
 
+def _system_get_default_datapath(params: dict[str, Any]) -> Any:
+    """Return the default datapath (project_root/datapath)."""
+    project_root = os.path.dirname(_ROOT_DIR)
+    datapath = os.path.join(project_root, "datapath")
+    return {"datapath": datapath}
+
+
 # ---------------------------------------------------------------------------
 # Method registry
 # ---------------------------------------------------------------------------
@@ -381,6 +388,7 @@ METHOD_TABLE: dict[str, MethodHandler] = {
     "settings.list": _settings_list,
     "system.open_folder": _system_open_folder,
     "system.clean_output": _system_clean_output,
+    "system.get_default_datapath": _system_get_default_datapath,
 }
 
 

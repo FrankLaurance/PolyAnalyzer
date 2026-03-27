@@ -9,7 +9,6 @@ import {
   ColorPicker,
   Space,
   InputNumber,
-  Tag,
   message,
 } from "antd";
 import {
@@ -26,6 +25,10 @@ import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
 import SettingsPanel from "../common/SettingsPanel";
+
+const DEFAULT_SEGMENT_POSITIONS = [
+  0, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 50000000,
+];
 
 export default function MwPanel() {
   const { t } = useTranslation();
@@ -46,7 +49,8 @@ export default function MwPanel() {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [saveImage, setSaveImage] = useState(true);
   const [displayImage, setDisplayImage] = useState(true);
-  const [splitPositions, setSplitPositions] = useState<number[]>([]);
+  const [allPositions, setAllPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
+  const [selectedPositions, setSelectedPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
   const [newPosition, setNewPosition] = useState<number | null>(null);
   const [currentSetting, setCurrentSetting] = useState<string>();
 
@@ -55,6 +59,17 @@ export default function MwPanel() {
       setProgress("mw", lastProgress.progress * 100, lastProgress.message);
     }
   }, [analyzer.running, lastProgress, setProgress]);
+
+  useEffect(() => {
+    sendRequest("system.get_default_datapath", {}).then((res) => {
+      const dp = (res as { datapath: string })?.datapath;
+      if (dp) {
+        setFolderPath(dp);
+        loadFiles(dp);
+      }
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
@@ -78,14 +93,12 @@ export default function MwPanel() {
   };
 
   const handleAddPosition = () => {
-    if (newPosition !== null && !splitPositions.includes(newPosition)) {
-      setSplitPositions([...splitPositions, newPosition].sort((a, b) => a - b));
+    if (newPosition !== null && !allPositions.includes(newPosition)) {
+      const updated = [...allPositions, newPosition].sort((a, b) => a - b);
+      setAllPositions(updated);
+      setSelectedPositions([...selectedPositions, newPosition].sort((a, b) => a - b));
       setNewPosition(null);
     }
-  };
-
-  const handleRemovePosition = (pos: number) => {
-    setSplitPositions(splitPositions.filter((p) => p !== pos));
   };
 
   const handleRun = async () => {
@@ -105,7 +118,7 @@ export default function MwPanel() {
         selected_files: selectedFiles,
         save_picture: saveImage,
         display_picture: displayImage,
-        segmentpos: splitPositions,
+        segmentpos: selectedPositions,
         bar_color: analyzerSettings.barColor,
         mw_color: analyzerSettings.mwColor,
         bar_width: analyzerSettings.barWidth,
@@ -240,21 +253,12 @@ export default function MwPanel() {
                     }
                   />
                 </div>
-                <div className="color-row">
-                  <label>{t("curve_color")}:</label>
-                  <ColorPicker
-                    value={analyzerSettings.curveColor}
-                    onChange={(c) =>
-                      updateAnalyzerSettings({ curveColor: c.toHexString() })
-                    }
-                  />
-                </div>
 
                 <div className="slider-row">
                   <label>{t("bar_width")}:</label>
                   <Slider
-                    min={0.1}
-                    max={3}
+                    min={0.2}
+                    max={2.0}
                     step={0.1}
                     value={analyzerSettings.barWidth}
                     onChange={(v) => updateAnalyzerSettings({ barWidth: v })}
@@ -263,8 +267,8 @@ export default function MwPanel() {
                 <div className="slider-row">
                   <label>{t("line_width")}:</label>
                   <Slider
-                    min={0.5}
-                    max={5}
+                    min={0.2}
+                    max={2.0}
                     step={0.1}
                     value={analyzerSettings.lineWidth}
                     onChange={(v) => updateAnalyzerSettings({ lineWidth: v })}
@@ -274,7 +278,7 @@ export default function MwPanel() {
                   <label>{t("axis_width")}:</label>
                   <Slider
                     min={0.5}
-                    max={5}
+                    max={2.0}
                     step={0.1}
                     value={analyzerSettings.axisWidth}
                     onChange={(v) => updateAnalyzerSettings({ axisWidth: v })}
@@ -283,8 +287,8 @@ export default function MwPanel() {
                 <div className="slider-row">
                   <label>{t("title_font_size")}:</label>
                   <Slider
-                    min={8}
-                    max={32}
+                    min={14}
+                    max={28}
                     step={1}
                     value={analyzerSettings.titleFontSize}
                     onChange={(v) =>
@@ -295,8 +299,8 @@ export default function MwPanel() {
                 <div className="slider-row">
                   <label>{t("axis_font_size")}:</label>
                   <Slider
-                    min={8}
-                    max={32}
+                    min={10}
+                    max={18}
                     step={1}
                     value={analyzerSettings.axisFontSize}
                     onChange={(v) =>
@@ -321,29 +325,27 @@ export default function MwPanel() {
               <div>
                 <div style={{ marginBottom: 8 }}>
                   <label>{t("split_position")}:</label>
-                  <div style={{ marginTop: 4 }}>
-                    {splitPositions.map((pos) => (
-                      <Tag
-                        key={pos}
-                        closable
-                        onClose={() => handleRemovePosition(pos)}
-                      >
-                        {pos}
-                      </Tag>
-                    ))}
-                    {splitPositions.length === 0 && (
-                      <span style={{ color: "var(--color-text-secondary)" }}>
-                        —
-                      </span>
-                    )}
-                  </div>
+                  <Select
+                    mode="multiple"
+                    style={{ width: "100%", marginTop: 4 }}
+                    value={selectedPositions}
+                    onChange={(vals) =>
+                      setSelectedPositions([...vals].sort((a, b) => a - b))
+                    }
+                    options={allPositions.map((p) => ({
+                      label: p.toLocaleString(),
+                      value: p,
+                    }))}
+                  />
                 </div>
                 <Space.Compact>
                   <InputNumber
                     value={newPosition}
                     onChange={(v) => setNewPosition(v)}
                     placeholder={t("new_split_position")}
-                    step={0.1}
+                    min={0}
+                    max={1000000000}
+                    step={1}
                   />
                   <Button icon={<PlusOutlined />} onClick={handleAddPosition}>
                     {t("add_region")}
