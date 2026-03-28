@@ -60,7 +60,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         progress_callback: Optional[Callable[[float, str], None]] = None,
     ) -> None:
         super().__init__(datadir, test_mode=test_mode, progress_callback=progress_callback)
-        self.output_dir: str = os.path.join(self.rootdir, "Mw_output")
+        self.output_dir: str = os.path.join(os.path.dirname(self.data_path), "Mw_output")
         self.setting_dir: str = os.path.join(self.rootdir, "setting")
         self.file_list: Optional[List[str]] = None
         self.selected_file: Optional[List[str]] = None

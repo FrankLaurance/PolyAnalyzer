@@ -48,6 +48,7 @@ export default function DscPanel() {
   const [leftBoundary, setLeftBoundary] = useState(1.9);
   const [rightBoundary, setRightBoundary] = useState(1.9);
   const [currentSetting, setCurrentSetting] = useState<string>();
+  const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
     if (analyzer.running) {
@@ -98,6 +99,9 @@ export default function DscPanel() {
         axis_font_size: analyzerSettings.axisFontSize,
         transparent_back: analyzerSettings.transparentBackground,
       });
+      const res = result as { cycle_dir?: string; pic_dir?: string };
+      if (res?.pic_dir) setOutputDir(res.pic_dir);
+      else if (res?.cycle_dir) setOutputDir(res.cycle_dir);
       setResult("dsc", {
         success: true,
         message: "DSC analysis complete",
@@ -114,8 +118,12 @@ export default function DscPanel() {
   };
 
   const handleOpenFolder = async () => {
-    if (folderPath) {
-      await openPath(folderPath);
+    const target = outputDir || folderPath;
+    if (!target) return;
+    try {
+      await sendRequest("system.open_folder", { path: target });
+    } catch {
+      if (folderPath) await openPath(folderPath);
     }
   };
 

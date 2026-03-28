@@ -60,12 +60,9 @@ class DSCAnalyzer(BaseAnalyzer):
     ) -> None:
         """初始化DSC分析器"""
         super().__init__(datadir)
-        # 如果提供了有效的数据目录，覆盖基类的默认设置
-        if datadir and os.path.exists(datadir):
-            self.data_path = datadir
 
-        self.cycle_dir: str = os.path.join(self.rootdir, "DSC_Cycle")
-        self.pic_dir: str = os.path.join(self.rootdir, "DSC_Pic")
+        self.cycle_dir: str = os.path.join(os.path.dirname(self.data_path), "DSC_Cycle")
+        self.pic_dir: str = os.path.join(os.path.dirname(self.data_path), "DSC_Pic")
         self.setting_dir: str = os.path.join(self.rootdir, "setting")
 
         self.heads: Dict[int, str] = {}

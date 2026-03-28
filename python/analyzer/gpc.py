@@ -40,7 +40,7 @@ class GPCAnalyzer(BaseAnalyzer):
         super().__init__(datadir, test_mode=test_mode,
                          progress_callback=progress_callback,
                          info_callback=info_callback)
-        self.output_dir: str = os.path.join(self.rootdir, "GPC_output")
+        self.output_dir: str = os.path.join(os.path.dirname(self.data_path), "GPC_output")
         self.file_list: Optional[List[str]] = None
         self.output_filename: str = output_filename
         self.selected_file: Optional[List[str]] = None

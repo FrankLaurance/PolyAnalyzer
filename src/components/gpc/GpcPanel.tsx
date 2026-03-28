@@ -41,6 +41,7 @@ export default function GpcPanel() {
   const [selectPartial, setSelectPartial] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [currentSetting, setCurrentSetting] = useState<string>();
+  const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
     if (analyzer.running) {
@@ -98,6 +99,8 @@ export default function GpcPanel() {
         save_figure_file_gpc: savePlotData,
         confirm_overwrite: confirmOverwrite,
       });
+      const res = result as { output_dir?: string };
+      if (res?.output_dir) setOutputDir(res.output_dir);
       setResult("gpc", {
         success: true,
         message: "GPC analysis complete",
@@ -114,8 +117,12 @@ export default function GpcPanel() {
   };
 
   const handleOpenFolder = async () => {
-    if (folderPath) {
-      await openPath(folderPath);
+    const target = outputDir || folderPath;
+    if (!target) return;
+    try {
+      await sendRequest("system.open_folder", { path: target });
+    } catch {
+      if (folderPath) await openPath(folderPath);
     }
   };
 

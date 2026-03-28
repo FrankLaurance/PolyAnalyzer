@@ -53,6 +53,7 @@ export default function MwPanel() {
   const [selectedPositions, setSelectedPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
   const [newPosition, setNewPosition] = useState<number | null>(null);
   const [currentSetting, setCurrentSetting] = useState<string>();
+  const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
     if (analyzer.running) {
@@ -131,6 +132,8 @@ export default function MwPanel() {
         draw_mw: analyzerSettings.drawMw,
         draw_table: analyzerSettings.drawTable,
       });
+      const res = result as { output_dir?: string };
+      if (res?.output_dir) setOutputDir(res.output_dir);
       setResult("mw", {
         success: true,
         message: "Mw analysis complete",
@@ -147,8 +150,12 @@ export default function MwPanel() {
   };
 
   const handleOpenFolder = async () => {
-    if (folderPath) {
-      await openPath(folderPath);
+    const target = outputDir || folderPath;
+    if (!target) return;
+    try {
+      await sendRequest("system.open_folder", { path: target });
+    } catch {
+      if (folderPath) await openPath(folderPath);
     }
   };
 

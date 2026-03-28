@@ -345,11 +345,16 @@ def _system_open_folder(params: dict[str, Any]) -> Any:
 
 
 def _system_clean_output(params: dict[str, Any]) -> Any:
+    datadir = params.get("datadir", "")
+    if datadir:
+        base = os.path.dirname(datadir)
+    else:
+        base = os.path.dirname(_ROOT_DIR)
     output_dirs = [
-        os.path.join(_ROOT_DIR, "Mw_output"),
-        os.path.join(_ROOT_DIR, "GPC_output"),
-        os.path.join(_ROOT_DIR, "DSC_Cycle"),
-        os.path.join(_ROOT_DIR, "DSC_Pic"),
+        os.path.join(base, "Mw_output"),
+        os.path.join(base, "GPC_output"),
+        os.path.join(base, "DSC_Cycle"),
+        os.path.join(base, "DSC_Pic"),
     ]
     cleaned: list[str] = []
     for dir_path in output_dirs:
