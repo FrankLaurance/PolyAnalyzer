@@ -375,10 +375,20 @@ def _system_clean_output(params: dict[str, Any]) -> Any:
     return {"success": True, "cleaned": cleaned}
 
 
+def _get_install_dir() -> str:
+    """Get the installation directory (exe dir for packaged, project root for dev)."""
+    if getattr(sys, "frozen", False):
+        # PyInstaller packaged: use the directory containing the executable
+        return os.path.dirname(sys.executable)
+    else:
+        # Development: use project root (parent of python/)
+        return os.path.dirname(_ROOT_DIR)
+
+
 def _system_get_default_datapath(params: dict[str, Any]) -> Any:
-    """Return the default datapath (project_root/datapath)."""
-    project_root = os.path.dirname(_ROOT_DIR)
-    datapath = os.path.join(project_root, "datapath")
+    """Return the default datapath under the installation directory."""
+    datapath = os.path.join(_get_install_dir(), "datapath")
+    os.makedirs(datapath, exist_ok=True)
     return {"datapath": datapath}
 
 
