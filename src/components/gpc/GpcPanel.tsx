@@ -31,7 +31,9 @@ export default function GpcPanel() {
     useSettingsStore();
 
   const [folderPath, setFolderPath] = useState("");
-  const [outputFilename, setOutputFilename] = useState("");
+  const [outputFilename, setOutputFilename] = useState(
+    () => new Date().toISOString().slice(0, 10).replace(/-/g, "")
+  );
   const [fileList, setFileList] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [saveSampleInfo, setSaveSampleInfo] = useState(true);
@@ -86,12 +88,13 @@ export default function GpcPanel() {
       message.warning(t("invalid_path"));
       return;
     }
+    const fname = outputFilename.trim() || new Date().toISOString().slice(0, 10).replace(/-/g, "");
     reset("gpc");
     setRunning("gpc", true);
     try {
       const result = await sendRequest("gpc.analyze", {
         datadir: folderPath,
-        output_filename: outputFilename,
+        output_filename: fname,
         selected_files: selectPartial ? selectedFiles : undefined,
         save_file: saveSampleInfo,
         save_picture: saveImage,
