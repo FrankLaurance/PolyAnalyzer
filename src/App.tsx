@@ -9,7 +9,7 @@ import OtherPanel from "./components/other/OtherPanel";
 import "./App.css";
 
 const { Content, Sider } = Layout;
-const { Paragraph, Link } = Typography;
+const { Paragraph } = Typography;
 
 function App() {
   const { t } = useTranslation();
@@ -39,12 +39,6 @@ function App() {
           <div className="help-panel">
             <Typography.Title level={5}>{t("help")}</Typography.Title>
             <Paragraph type="secondary">{t("contact_info")}</Paragraph>
-            <Link
-              href="https://github.com/FrankLaurance/PolyAnalyzer"
-              target="_blank"
-            >
-              GitHub
-            </Link>
           </div>
         </Sider>
       </Layout>
