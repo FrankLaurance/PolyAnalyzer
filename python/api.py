@@ -95,6 +95,7 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
     output_filename = _require_param(params, "output_filename")
     selected_files: list[str] | None = params.get("selected_files")
     datadir = params.get("datadir", "")
+    confirm_overwrite = params.get("confirm_overwrite", False)
 
     analyzer = GPCAnalyzer(
         datadir=datadir,
@@ -107,6 +108,9 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
     )
     if selected_files is not None:
         analyzer.selected_file = selected_files
+
+    if not confirm_overwrite and analyzer.check_dir():
+        raise JsonRpcError(INVALID_PARAMS, "Output files already exist. Enable confirm_overwrite to replace them.")
 
     success = analyzer.run()
     if not success:
@@ -228,6 +232,12 @@ def _dsc_analyze(params: dict[str, Any]) -> Any:
         left_length=params.get("left_length", 1.9),
         right_length=params.get("right_length", 1.9),
         setting_name=params.get("setting_name", DEFAULT_DSC_SETTING_NAME),
+        curve_color=params.get("curve_color"),
+        line_width=params.get("line_width"),
+        axis_width=params.get("axis_width"),
+        title_font_size=params.get("title_font_size"),
+        axis_font_size=params.get("axis_font_size"),
+        transparent_back=params.get("transparent_back"),
         progress_callback=_make_progress_callback(),
     )
 

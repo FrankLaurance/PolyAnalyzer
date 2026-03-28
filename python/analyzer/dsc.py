@@ -55,6 +55,12 @@ class DSCAnalyzer(BaseAnalyzer):
         left_length: float = 1.9,
         right_length: float = 1.9,
         setting_name: str = DEFAULT_DSC_SETTING_NAME,
+        curve_color: Optional[str] = None,
+        line_width: Optional[float] = None,
+        axis_width: Optional[float] = None,
+        title_font_size: Optional[int] = None,
+        axis_font_size: Optional[int] = None,
+        transparent_back: Optional[bool] = None,
         progress_callback: Optional[Callable[[float, str], None]] = None,
         info_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
@@ -111,15 +117,15 @@ class DSCAnalyzer(BaseAnalyzer):
         self.setting_name: str = setting_name
         setting = self.settings_manager.load_setting(self.setting_name)
 
-        # 初始化绘图属性
-        self.curve_color: str = setting.get("curve_color", DEFAULT_BAR_COLOR)
-        self.transparent_back: bool = setting.get(
+        # 初始化绘图属性 — constructor params override settings file
+        self.curve_color: str = curve_color if curve_color is not None else setting.get("curve_color", DEFAULT_BAR_COLOR)
+        self.transparent_back: bool = transparent_back if transparent_back is not None else setting.get(
             "transparent_back", DEFAULT_TRANSPARENT_BACK
         )
-        self.line_width: float = setting.get("line_width", 1.0)
-        self.axis_width: float = setting.get("axis_width", 1.0)
-        self.title_font_size: int = setting.get("title_font_size", 20)
-        self.axis_font_size: int = setting.get("axis_font_size", 14)
+        self.line_width: float = line_width if line_width is not None else setting.get("line_width", 1.0)
+        self.axis_width: float = axis_width if axis_width is not None else setting.get("axis_width", 1.0)
+        self.title_font_size: int = title_font_size if title_font_size is not None else setting.get("title_font_size", 20)
+        self.axis_font_size: int = axis_font_size if axis_font_size is not None else setting.get("axis_font_size", 14)
 
     # -- settings ----------------------------------------------------------
 

@@ -90,18 +90,18 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         self.setting_name: str = setting_name
         setting = self.settings_manager.load_setting(self.setting_name)
 
-        # Plot attributes
-        self.bar_color: str = setting.get("bar_color", DEFAULT_BAR_COLOR)
-        self.mw_color: str = setting.get("mw_color", DEFAULT_MW_COLOR)
-        self.transparent_back: bool = setting.get("transparent_back", DEFAULT_TRANSPARENT_BACK)
-        self.bar_width: float = setting.get("bar_width", 1.2)
-        self.line_width: float = setting.get("line_width", 1.0)
-        self.axis_width: float = setting.get("axis_width", 1.0)
-        self.title_font_size: float = setting.get("title_font_size", 20)
-        self.axis_font_size: float = setting.get("axis_font_size", 14)
-        self.draw_bar: bool = setting.get("draw_bar", True)
-        self.draw_mw: bool = setting.get("draw_mw", True)
-        self.draw_table: bool = setting.get("draw_table", True)
+        # Plot attributes — constructor params override settings file
+        self.bar_color: str = bar_color
+        self.mw_color: str = mw_color
+        self.transparent_back: bool = transparent_back
+        self.bar_width: float = bar_width
+        self.line_width: float = line_width
+        self.axis_width: float = axis_width
+        self.title_font_size: float = title_font_size
+        self.axis_font_size: float = axis_font_size
+        self.draw_bar: bool = draw_bar
+        self.draw_mw: bool = draw_mw
+        self.draw_table: bool = draw_table
 
         # Segment positions
         self.segmentpos: List[int] = setting.get(

@@ -197,20 +197,19 @@ export default function GpcPanel() {
         </div>
       </div>
 
-      {/* File list */}
-      {selectPartial && (
-        <div className="panel-section">
-          <label className="panel-section-title">{t("file_list")}</label>
-          <Select
-            mode="multiple"
-            className="file-list-select"
-            value={selectedFiles}
-            onChange={setSelectedFiles}
-            options={fileList.map((f) => ({ label: f, value: f }))}
-            placeholder={t("file_list")}
-          />
-        </div>
-      )}
+      {/* File list — always visible, selection enabled when selectPartial */}
+      <div className="panel-section">
+        <label className="panel-section-title">{t("file_list")}</label>
+        <Select
+          mode="multiple"
+          className="file-list-select"
+          value={selectedFiles}
+          onChange={setSelectedFiles}
+          disabled={!selectPartial}
+          options={fileList.map((f) => ({ label: f, value: f }))}
+          placeholder={t("file_list")}
+        />
+      </div>
 
       {/* Overwrite confirmation */}
       <div className="panel-section">

@@ -48,7 +48,9 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       language: localStorage.getItem("polyanalyzer-language") || "zh_CN",
       analyzerSettings: { ...defaultAnalyzerSettings },
-      savedSettings: {},
+      savedSettings: {
+        default: { ...defaultAnalyzerSettings },
+      },
 
       setLanguage: (lang: string) => {
         i18n.changeLanguage(lang);
@@ -88,6 +90,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "polyanalyzer-settings",
+      merge: (persisted, current) => {
+        const p = persisted as Partial<SettingsState> | undefined;
+        return {
+          ...(current as SettingsState),
+          ...p,
+          savedSettings: {
+            default: { ...defaultAnalyzerSettings },
+            ...(p?.savedSettings ?? {}),
+          },
+        };
+      },
     },
   ),
 );
