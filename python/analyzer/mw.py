@@ -22,6 +22,7 @@ from .base import (
     FIGURE_SIZE_WITH_TABLE,
     FIGURE_SIZE_WITHOUT_TABLE,
     GRIDSPEC_ROWS,
+    get_install_dir,
     GRIDSPEC_COLS,
     MW_DATA_OFFSET,
     NORM_COLUMN_INDEX,
@@ -61,7 +62,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
     ) -> None:
         super().__init__(datadir, test_mode=test_mode, progress_callback=progress_callback)
         self.output_dir: str = os.path.join(os.path.dirname(self.data_path), "Mw_output")
-        self.setting_dir: str = os.path.join(self.rootdir, "setting")
+        self.setting_dir: str = os.path.join(get_install_dir(), "setting")
         self.file_list: Optional[List[str]] = None
         self.selected_file: Optional[List[str]] = None
 

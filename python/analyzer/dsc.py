@@ -24,6 +24,7 @@ from .base import (
     DEFAULT_TRANSPARENT_BACK,
     FIGURE_DPI,
     FIGURE_SIZE_WITHOUT_TABLE,
+    get_install_dir,
 )
 
 # Color palette for cycle overlay plots.
@@ -69,7 +70,7 @@ class DSCAnalyzer(BaseAnalyzer):
 
         self.cycle_dir: str = os.path.join(os.path.dirname(self.data_path), "DSC_Cycle")
         self.pic_dir: str = os.path.join(os.path.dirname(self.data_path), "DSC_Pic")
-        self.setting_dir: str = os.path.join(self.rootdir, "setting")
+        self.setting_dir: str = os.path.join(get_install_dir(), "setting")
 
         self.heads: Dict[int, str] = {}
         self.method: Dict[int, Tuple[float, float, float, float]] = {}

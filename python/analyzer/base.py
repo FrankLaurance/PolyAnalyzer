@@ -17,6 +17,17 @@ from typing import List, Optional, Tuple, Callable, Any, Dict
 
 from numpy.typing import NDArray
 
+import sys
+
+
+def get_install_dir() -> str:
+    """Get the installation directory (exe dir for packaged, project root for dev)."""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(sys.executable)
+    else:
+        # base.py -> analyzer/ -> python/ -> project_root/
+        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 # ---------------------------------------------------------------------------
 # Matplotlib backend (non-interactive)

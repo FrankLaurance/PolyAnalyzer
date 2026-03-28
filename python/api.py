@@ -23,6 +23,7 @@ from analyzer import (
     DEFAULT_BAR_COLOR,
     DEFAULT_MW_COLOR,
     DEFAULT_TRANSPARENT_BACK,
+    get_install_dir,
 )
 
 logger = logging.getLogger(__name__)
@@ -269,7 +270,7 @@ def _dsc_list_files(params: dict[str, Any]) -> Any:
 def _get_settings_manager(params: dict[str, Any]) -> SettingsManager:
     """Build a SettingsManager from request params."""
     analyzer_type = params.get("type", "mw")
-    setting_dir = os.path.join(_ROOT_DIR, "setting")
+    setting_dir = os.path.join(get_install_dir(), "setting")
 
     if analyzer_type == "dsc":
         default_name = DEFAULT_DSC_SETTING_NAME
@@ -375,19 +376,9 @@ def _system_clean_output(params: dict[str, Any]) -> Any:
     return {"success": True, "cleaned": cleaned}
 
 
-def _get_install_dir() -> str:
-    """Get the installation directory (exe dir for packaged, project root for dev)."""
-    if getattr(sys, "frozen", False):
-        # PyInstaller packaged: use the directory containing the executable
-        return os.path.dirname(sys.executable)
-    else:
-        # Development: use project root (parent of python/)
-        return os.path.dirname(_ROOT_DIR)
-
-
 def _system_get_default_datapath(params: dict[str, Any]) -> Any:
     """Return the default datapath under the installation directory."""
-    datapath = os.path.join(_get_install_dir(), "datapath")
+    datapath = os.path.join(get_install_dir(), "datapath")
     os.makedirs(datapath, exist_ok=True)
     return {"datapath": datapath}
 

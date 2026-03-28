@@ -27,6 +27,8 @@ from .base import (
     PERCENTAGE_FACTOR,
     BAR_POSITION_WEIGHT_LEFT,
     BAR_POSITION_WEIGHT_RIGHT,
+    # Functions
+    get_install_dir,
     # Classes
     Logger,
     DataValidator,
@@ -62,6 +64,7 @@ __all__ = [
     "PERCENTAGE_FACTOR",
     "BAR_POSITION_WEIGHT_LEFT",
     "BAR_POSITION_WEIGHT_RIGHT",
+    "get_install_dir",
     "Logger",
     "DataValidator",
     "SettingsManager",
