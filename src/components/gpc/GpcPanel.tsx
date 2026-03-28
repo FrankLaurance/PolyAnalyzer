@@ -89,6 +89,7 @@ export default function GpcPanel() {
       return;
     }
     const fname = outputFilename.trim() || new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const startTime = Date.now();
     reset("gpc");
     setRunning("gpc", true);
     try {
@@ -102,15 +103,16 @@ export default function GpcPanel() {
         save_figure_file_gpc: savePlotData,
         confirm_overwrite: confirmOverwrite,
       });
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const res = result as { output_dir?: string };
       if (res?.output_dir) setOutputDir(res.output_dir);
-      setProgress("gpc", 100, t("complete", { time: "—" }));
+      setProgress("gpc", 100, t("complete", { time: elapsed + "s" }));
       setResult("gpc", {
         success: true,
         message: "GPC analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: "—" }));
+      message.success(t("complete", { time: elapsed + "s" }));
     } catch (err) {
       setResult("gpc", {
         success: false,

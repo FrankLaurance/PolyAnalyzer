@@ -78,6 +78,7 @@ export default function DscPanel() {
       message.warning(t("invalid_path"));
       return;
     }
+    const startTime = Date.now();
     reset("dsc");
     setRunning("dsc", true);
     try {
@@ -99,16 +100,17 @@ export default function DscPanel() {
         axis_font_size: analyzerSettings.axisFontSize,
         transparent_back: analyzerSettings.transparentBackground,
       });
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const res = result as { cycle_dir?: string; pic_dir?: string };
       if (res?.pic_dir) setOutputDir(res.pic_dir);
       else if (res?.cycle_dir) setOutputDir(res.cycle_dir);
-      setProgress("dsc", 100, t("complete", { time: "—" }));
+      setProgress("dsc", 100, t("complete", { time: elapsed + "s" }));
       setResult("dsc", {
         success: true,
         message: "DSC analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: "—" }));
+      message.success(t("complete", { time: elapsed + "s" }));
     } catch (err) {
       setResult("dsc", {
         success: false,

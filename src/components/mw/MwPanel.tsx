@@ -111,6 +111,7 @@ export default function MwPanel() {
       message.warning(t("select_at_least_one"));
       return;
     }
+    const startTime = Date.now();
     reset("mw");
     setRunning("mw", true);
     try {
@@ -132,15 +133,16 @@ export default function MwPanel() {
         draw_mw: analyzerSettings.drawMw,
         draw_table: analyzerSettings.drawTable,
       });
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const res = result as { output_dir?: string };
       if (res?.output_dir) setOutputDir(res.output_dir);
-      setProgress("mw", 100, t("complete", { time: "—" }));
+      setProgress("mw", 100, t("complete", { time: elapsed + "s" }));
       setResult("mw", {
         success: true,
         message: "Mw analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: "—" }));
+      message.success(t("complete", { time: elapsed + "s" }));
     } catch (err) {
       setResult("mw", {
         success: false,
