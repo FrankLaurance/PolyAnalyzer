@@ -88,9 +88,8 @@ def main() -> None:
     if os.path.exists(built_path) and built_path != final_path:
         shutil.move(built_path, final_path)
 
-    print(f"\n✅ Sidecar built: {final_path}")
     size_mb = os.path.getsize(final_path) / (1024 * 1024)
-    print(f"   Size: {size_mb:.1f} MB")
+    print(f"\nSidecar built: {final_path}  Size: {size_mb:.1f} MB")
 
 
 if __name__ == "__main__":
