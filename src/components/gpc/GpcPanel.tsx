@@ -42,7 +42,7 @@ export default function GpcPanel() {
   const [savePlotData, setSavePlotData] = useState(false);
   const [selectPartial, setSelectPartial] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
-  const [currentSetting, setCurrentSetting] = useState<string>();
+  const [currentSetting, setCurrentSetting] = useState<string>("default");
   const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
@@ -264,7 +264,7 @@ export default function GpcPanel() {
                 }}
                 onDelete={(name) => {
                   deleteSettings(name);
-                  setCurrentSetting(undefined);
+                  setCurrentSetting("");
                 }}
               />
             ),

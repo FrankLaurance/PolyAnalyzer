@@ -52,7 +52,7 @@ export default function MwPanel() {
   const [allPositions, setAllPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
   const [selectedPositions, setSelectedPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
   const [newPosition, setNewPosition] = useState<number | null>(null);
-  const [currentSetting, setCurrentSetting] = useState<string>();
+  const [currentSetting, setCurrentSetting] = useState<string>("default");
   const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
@@ -423,7 +423,7 @@ export default function MwPanel() {
                 }}
                 onDelete={(name) => {
                   deleteSettings(name);
-                  setCurrentSetting(undefined);
+                  setCurrentSetting("");
                 }}
               />
             ),

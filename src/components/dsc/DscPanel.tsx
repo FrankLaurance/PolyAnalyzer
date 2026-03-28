@@ -47,7 +47,7 @@ export default function DscPanel() {
   const [centerPeak, setCenterPeak] = useState(false);
   const [leftBoundary, setLeftBoundary] = useState(1.9);
   const [rightBoundary, setRightBoundary] = useState(1.9);
-  const [currentSetting, setCurrentSetting] = useState<string>();
+  const [currentSetting, setCurrentSetting] = useState<string>("default");
   const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
@@ -350,7 +350,7 @@ export default function DscPanel() {
                 }}
                 onDelete={(name) => {
                   deleteSettings(name);
-                  setCurrentSetting(undefined);
+                  setCurrentSetting("");
                 }}
               />
             ),
