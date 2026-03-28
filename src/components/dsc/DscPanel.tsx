@@ -102,6 +102,7 @@ export default function DscPanel() {
       const res = result as { cycle_dir?: string; pic_dir?: string };
       if (res?.pic_dir) setOutputDir(res.pic_dir);
       else if (res?.cycle_dir) setOutputDir(res.cycle_dir);
+      setProgress("dsc", 100, t("complete", { time: "—" }));
       setResult("dsc", {
         success: true,
         message: "DSC analysis complete",

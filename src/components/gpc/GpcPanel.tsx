@@ -101,6 +101,7 @@ export default function GpcPanel() {
       });
       const res = result as { output_dir?: string };
       if (res?.output_dir) setOutputDir(res.output_dir);
+      setProgress("gpc", 100, t("complete", { time: "—" }));
       setResult("gpc", {
         success: true,
         message: "GPC analysis complete",

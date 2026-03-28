@@ -134,6 +134,7 @@ export default function MwPanel() {
       });
       const res = result as { output_dir?: string };
       if (res?.output_dir) setOutputDir(res.output_dir);
+      setProgress("mw", 100, t("complete", { time: "—" }));
       setResult("mw", {
         success: true,
         message: "Mw analysis complete",
