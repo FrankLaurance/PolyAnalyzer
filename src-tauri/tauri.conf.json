@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "PolyAnalyzer",
   "version": "2.0.0",
-  "identifier": "com.polyanalyzer.app",
+  "identifier": "com.polyanalyzer.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",

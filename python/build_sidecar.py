@@ -68,6 +68,7 @@ def main() -> None:
         "--hidden-import", "scipy",
         "--hidden-import", "openpyxl",
         "--hidden-import", "chardet",
+        "--hidden-import", "plottable",
         "--exclude-module", "tkinter",
         "--exclude-module", "PyQt5",
         "--exclude-module", "PyQt6",
