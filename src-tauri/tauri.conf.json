@@ -35,7 +35,18 @@
     ],
     "externalBin": [
       "binaries/polyanalyzer-engine"
-    ]
+    ],
+    "windows": {
+      "allowDowngrades": true,
+      "nsis": {
+        "installMode": "both",
+        "displayLanguageSelector": false,
+        "languages": ["SimpChinese", "English"],
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null
+      }
+    }
   },
   "plugins": {}
 }
