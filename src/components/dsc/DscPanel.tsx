@@ -17,6 +17,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -124,9 +125,9 @@ export default function DscPanel() {
     const target = outputDir || folderPath;
     if (!target) return;
     try {
-      await sendRequest("system.open_folder", { path: target });
+      await invoke("open_folder", { path: target });
     } catch {
-      if (folderPath) await openPath(folderPath);
+      try { await openPath(target); } catch { /* ignore */ }
     }
   };
 
