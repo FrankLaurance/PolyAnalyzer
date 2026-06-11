@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Build the Python sidecar executable using PyInstaller.
+"""Build PolyAnalyzer Python executables using PyInstaller.
 
 Usage:
     python build_sidecar.py
 
 Output:
     src-tauri/binaries/polyanalyzer-engine-{target_triple}[.exe]
+    src-tauri/binaries/poly-{target_triple}[.exe]
 """
 
 import os
@@ -38,6 +39,74 @@ def get_target_triple() -> str:
         raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
 
+HIDDEN_IMPORTS = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "matplotlib.backends.backend_agg",
+    "scipy",
+    "openpyxl",
+    "chardet",
+    "plottable",
+]
+
+EXCLUDED_MODULES = [
+    "tkinter",
+    "PyQt5",
+    "PyQt6",
+    "PySide2",
+    "PySide6",
+    "IPython",
+    "jupyter",
+    "streamlit",
+]
+
+
+def build_executable(
+    *,
+    python_dir: str,
+    output_dir: str,
+    target_triple: str,
+    binary_name: str,
+    entrypoint: str,
+) -> str:
+    """Build one PyInstaller executable and rename it for Tauri externalBin."""
+    ext = ".exe" if platform.system() == "Windows" else ""
+    output_name = f"{binary_name}-{target_triple}{ext}"
+    final_path = os.path.join(output_dir, output_name)
+
+    print(f"Building {binary_name} for: {target_triple}")
+    print(f"Output: {final_path}")
+
+    cmd = [
+        sys.executable, "-m", "PyInstaller",
+        "--onefile",
+        "--clean",
+        "--noconfirm",
+        "--name", binary_name,
+        "--distpath", output_dir,
+        "--workpath", os.path.join(python_dir, "build", binary_name),
+        "--specpath", os.path.join(python_dir, "build"),
+        "--paths", python_dir,
+    ]
+    for module in HIDDEN_IMPORTS:
+        cmd.extend(["--hidden-import", module])
+    for module in EXCLUDED_MODULES:
+        cmd.extend(["--exclude-module", module])
+    cmd.append(os.path.join(python_dir, entrypoint))
+
+    subprocess.run(cmd, check=True)
+
+    # Rename to include target triple (Tauri sidecar naming convention)
+    built_path = os.path.join(output_dir, f"{binary_name}{ext}")
+    if os.path.exists(built_path) and built_path != final_path:
+        shutil.move(built_path, final_path)
+
+    size_mb = os.path.getsize(final_path) / (1024 * 1024)
+    print(f"{binary_name} built: {final_path}  Size: {size_mb:.1f} MB\n")
+    return final_path
+
+
 def main() -> None:
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     python_dir = os.path.join(project_root, "python")
@@ -45,51 +114,20 @@ def main() -> None:
     os.makedirs(output_dir, exist_ok=True)
 
     target_triple = get_target_triple()
-    ext = ".exe" if platform.system() == "Windows" else ""
-    output_name = f"polyanalyzer-engine-{target_triple}{ext}"
-
-    print(f"Building sidecar for: {target_triple}")
-    print(f"Output: {os.path.join(output_dir, output_name)}")
-
-    cmd = [
-        sys.executable, "-m", "PyInstaller",
-        "--onefile",
-        "--clean",
-        "--noconfirm",
-        "--name", "polyanalyzer-engine",
-        "--distpath", output_dir,
-        "--workpath", os.path.join(python_dir, "build"),
-        "--specpath", os.path.join(python_dir, "build"),
-        "--paths", python_dir,
-        "--hidden-import", "numpy",
-        "--hidden-import", "pandas",
-        "--hidden-import", "matplotlib",
-        "--hidden-import", "matplotlib.backends.backend_agg",
-        "--hidden-import", "scipy",
-        "--hidden-import", "openpyxl",
-        "--hidden-import", "chardet",
-        "--hidden-import", "plottable",
-        "--exclude-module", "tkinter",
-        "--exclude-module", "PyQt5",
-        "--exclude-module", "PyQt6",
-        "--exclude-module", "PySide2",
-        "--exclude-module", "PySide6",
-        "--exclude-module", "IPython",
-        "--exclude-module", "jupyter",
-        "--exclude-module", "streamlit",
-        os.path.join(python_dir, "main.py"),
-    ]
-
-    subprocess.run(cmd, check=True)
-
-    # Rename to include target triple (Tauri sidecar naming convention)
-    built_path = os.path.join(output_dir, f"polyanalyzer-engine{ext}")
-    final_path = os.path.join(output_dir, output_name)
-    if os.path.exists(built_path) and built_path != final_path:
-        shutil.move(built_path, final_path)
-
-    size_mb = os.path.getsize(final_path) / (1024 * 1024)
-    print(f"\nSidecar built: {final_path}  Size: {size_mb:.1f} MB")
+    build_executable(
+        python_dir=python_dir,
+        output_dir=output_dir,
+        target_triple=target_triple,
+        binary_name="polyanalyzer-engine",
+        entrypoint="main.py",
+    )
+    build_executable(
+        python_dir=python_dir,
+        output_dir=output_dir,
+        target_triple=target_triple,
+        binary_name="poly",
+        entrypoint="cli.py",
+    )
 
 
 if __name__ == "__main__":

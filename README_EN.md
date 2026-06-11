@@ -1,6 +1,6 @@
 # PolyAnalyzer - Polymer Materials Data Visualization Tool
 
-English | [中文](README.md)
+English | [中文](README.md) | [CLI Usage](CLI_USAGE_EN.md)
 
 A professional data analysis and visualization tool for polymer materials, integrating GPC (Gel Permeation Chromatography) and DSC (Differential Scanning Calorimetry) analysis capabilities, providing researchers with efficient and intuitive data processing experience.
 
@@ -30,6 +30,10 @@ A professional data analysis and visualization tool for polymer materials, integ
 - Multiple packaging methods to meet different deployment needs
 
 ## 🚀 Quick Start
+
+### Command-Line Batch Processing
+
+For scripted or batch GPC, Mw, and DSC analysis, see [CLI Usage](CLI_USAGE_EN.md). Source checkouts can run `python3 python/cli.py ...`; desktop installers also bundle the `poly` CLI, but it is not registered in the global `PATH`.
 
 ### Method 1: Windows Portable Version (Recommended - Zero Barrier to Entry)
 

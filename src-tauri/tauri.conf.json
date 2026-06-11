@@ -34,7 +34,8 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "binaries/polyanalyzer-engine"
+      "binaries/polyanalyzer-engine",
+      "binaries/poly"
     ],
     "windows": {
       "allowDowngrades": true,

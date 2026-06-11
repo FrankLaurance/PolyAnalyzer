@@ -4,6 +4,7 @@
 
 - [1. 简介](#1-简介)
 - [2. 安装与启动](#2-安装与启动)
+  - [2.1 命令行批处理](#21-命令行批处理)
 - [3. 界面概览](#3-界面概览)
 - [4. GPC 分析](#4-gpc-分析)
 - [5. Mw 分析](#5-mw-分析)
@@ -61,6 +62,22 @@ chmod +x PolyAnalyzer_2.0.0_amd64.AppImage
 1. 下载 `.dmg` 文件
 2. 双击打开，将 **PolyAnalyzer** 拖入 Applications 文件夹
 3. 首次打开如提示"无法验证开发者"，前往 **系统设置 → 隐私与安全性** 点击"仍要打开"
+
+### 2.1 命令行批处理
+
+安装包会随应用携带 `poly` 命令行工具，用于脚本化运行 GPC、Mw 和 DSC 分析。CLI 不会注册到全局 `PATH`，请从安装目录或应用资源目录调用，例如：
+
+```bash
+"/Applications/PolyAnalyzer.app/Contents/MacOS/poly" --help
+```
+
+源码环境可使用：
+
+```bash
+python3 python/cli.py --help
+```
+
+完整命令参考、输出目录、JSON 输出和退出码说明见 [CLI 使用说明](CLI_USAGE.md) / [CLI Usage](CLI_USAGE_EN.md)。
 
 ### 目录结构
 

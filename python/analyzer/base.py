@@ -37,7 +37,7 @@ os.environ["MPLBACKEND"] = "Agg"
 # ---------------------------------------------------------------------------
 # Constants — default settings
 # ---------------------------------------------------------------------------
-APP_VERSION: str = "1.1.2"
+APP_VERSION: str = "2.0.0"
 DEFAULT_BAR_COLOR: str = "#002FA7"
 DEFAULT_MW_COLOR: str = "#FF6A07"
 DEFAULT_SETTING_NAME: str = "defaultSetting.ini"

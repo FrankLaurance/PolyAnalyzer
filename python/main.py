@@ -3,8 +3,19 @@
 from __future__ import annotations
 
 import logging
+import os
 import signal
 import sys
+import tempfile
+
+
+_CACHE_ROOT = os.path.join(tempfile.gettempdir(), "polyanalyzer-cache")
+_MPL_CACHE_DIR = os.path.join(_CACHE_ROOT, "matplotlib")
+_XDG_CACHE_DIR = os.path.join(_CACHE_ROOT, "xdg")
+os.makedirs(_MPL_CACHE_DIR, exist_ok=True)
+os.makedirs(_XDG_CACHE_DIR, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", _MPL_CACHE_DIR)
+os.environ.setdefault("XDG_CACHE_HOME", _XDG_CACHE_DIR)
 
 
 def _setup_logging() -> None:

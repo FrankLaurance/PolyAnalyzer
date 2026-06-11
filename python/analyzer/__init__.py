@@ -1,6 +1,5 @@
 """PolyAnalyzer analyzer package."""
 
-from .gpc import GPCAnalyzer
 from .base import (
     # Constants
     APP_VERSION,
@@ -36,8 +35,20 @@ from .base import (
     BaseAnalyzer,
     logger,
 )
-from .dsc import DSCAnalyzer
-from .mw import MolecularWeightAnalyzer
+
+
+def __getattr__(name: str):
+    """Lazily import analyzer classes so lightweight commands stay fast."""
+    if name == "GPCAnalyzer":
+        from .gpc import GPCAnalyzer
+        return GPCAnalyzer
+    if name == "DSCAnalyzer":
+        from .dsc import DSCAnalyzer
+        return DSCAnalyzer
+    if name == "MolecularWeightAnalyzer":
+        from .mw import MolecularWeightAnalyzer
+        return MolecularWeightAnalyzer
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
     "APP_VERSION",

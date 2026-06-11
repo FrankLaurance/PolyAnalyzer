@@ -1,6 +1,6 @@
 # PolyAnalyzer - 高分子材料数据可视化工具
 
-[English](README_EN.md) | 中文
+[English](README_EN.md) | 中文 | [CLI 使用说明](CLI_USAGE.md)
 
 一个专业的高分子材料数据分析与可视化工具，集成了GPC（凝胶渗透色谱）和DSC（差示扫描量热法）分析功能，为科研人员提供高效、直观的数据处理体验。
 
@@ -30,6 +30,10 @@
 - 多种打包方式，满足不同部署需求
 
 ## 🚀 快速开始
+
+### 命令行批处理
+
+需要在脚本或批量任务中运行 GPC、Mw、DSC 分析时，请参考 [CLI 使用说明](CLI_USAGE.md)。源码环境可使用 `python3 python/cli.py ...`，桌面安装包会同时携带 `poly` 命令行工具，但不会注册到全局 `PATH`。
 
 ### 方式一：Windows 便携版（推荐 - 零门槛使用）
 
