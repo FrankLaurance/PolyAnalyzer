@@ -34,6 +34,7 @@ from .base import (
     BAR_POSITION_WEIGHT_LEFT,
     BAR_POSITION_WEIGHT_RIGHT,
 )
+from .plotting import configure_plotting
 
 
 class MolecularWeightAnalyzer(BaseAnalyzer):
@@ -69,6 +70,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         # Per-file data
         self.norm: Optional[np.ndarray] = None
         self.mw: Optional[np.ndarray] = None
+        self._plt: Any | None = None
 
         # Settings manager
         default_setting: Dict[str, Any] = {
@@ -434,7 +436,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
 
     def draw_image(self) -> None:
         """绘制分子量分布图"""
-        import matplotlib.pyplot as plt
+        plt = self._plt or configure_plotting()
 
         self._validate_draw_data()
         segment_percentages = self._calculate_segment_percentages()
@@ -473,10 +475,18 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
             return False
 
         self.file_list = self.selected_file
+        if self.progress_callback:
+            self.progress_callback(0.01, "Preparing MW plot engine")
+        self._plt = configure_plotting()
 
         for pro, filename in enumerate(self.file_list):
             self.filename = filename
             try:
+                if self.progress_callback:
+                    self.progress_callback(
+                        0.05 + 0.9 * pro / len(self.file_list),
+                        f"Processing {filename}",
+                    )
                 if self.read_file(filename):
                     self.preprocess()
                     self.draw_image()

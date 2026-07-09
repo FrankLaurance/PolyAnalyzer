@@ -12,6 +12,7 @@ import logging
 import platform
 import subprocess
 import numpy as np
+from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Tuple, Callable, Any, Dict
 
@@ -23,7 +24,15 @@ import sys
 def get_install_dir() -> str:
     """Get the installation directory (exe dir for packaged, project root for dev)."""
     if getattr(sys, "frozen", False):
-        return os.path.dirname(sys.executable)
+        exe_dir = Path(sys.executable).resolve().parent
+        for parent in (exe_dir, *exe_dir.parents):
+            if (
+                (parent / "src-tauri").is_dir()
+                and (parent / "datapath").is_dir()
+                and (parent / "setting").is_dir()
+            ):
+                return str(parent)
+        return str(exe_dir)
     else:
         # base.py -> analyzer/ -> python/ -> project_root/
         return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -18,8 +18,8 @@ _MPL_CACHE_DIR = os.path.join(_CACHE_ROOT, "matplotlib")
 _XDG_CACHE_DIR = os.path.join(_CACHE_ROOT, "xdg")
 os.makedirs(_MPL_CACHE_DIR, exist_ok=True)
 os.makedirs(_XDG_CACHE_DIR, exist_ok=True)
-os.environ.setdefault("MPLCONFIGDIR", _MPL_CACHE_DIR)
-os.environ.setdefault("XDG_CACHE_HOME", _XDG_CACHE_DIR)
+os.environ["MPLCONFIGDIR"] = _MPL_CACHE_DIR
+os.environ["XDG_CACHE_HOME"] = _XDG_CACHE_DIR
 
 from analyzer import (
     APP_VERSION,
@@ -259,7 +259,7 @@ def _read_json_file(path: str) -> dict[str, Any]:
 
 
 def _run_gpc(args: argparse.Namespace) -> int:
-    from analyzer import GPCAnalyzer
+    from analyzer.gpc import GPCAnalyzer
 
     datadir = _ensure_datadir(args.datadir)
     selected_files = _validate_selected_files(datadir, _flatten_files(args.files), "*.rst")
@@ -294,7 +294,7 @@ def _run_gpc(args: argparse.Namespace) -> int:
 
 
 def _run_mw(args: argparse.Namespace) -> int:
-    from analyzer import MolecularWeightAnalyzer
+    from analyzer.mw import MolecularWeightAnalyzer
 
     datadir = _ensure_datadir(args.datadir)
     selected_files = _validate_selected_files(datadir, _flatten_files(args.files), "*.rst")
@@ -344,7 +344,7 @@ def _run_mw(args: argparse.Namespace) -> int:
 
 
 def _run_dsc(args: argparse.Namespace) -> int:
-    from analyzer import DSCAnalyzer
+    from analyzer.dsc import DSCAnalyzer
 
     datadir = _ensure_datadir(args.datadir)
     selected_files = _list_files(datadir, "*.txt")

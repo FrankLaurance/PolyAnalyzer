@@ -79,8 +79,10 @@ export default function GpcPanel() {
       const result = res?.files;
       setFileList(result ?? []);
       setSelectedFiles(result ?? []);
-    } catch {
+    } catch (err) {
       setFileList([]);
+      setSelectedFiles([]);
+      message.error(err instanceof Error ? err.message : String(err));
     }
   };
 

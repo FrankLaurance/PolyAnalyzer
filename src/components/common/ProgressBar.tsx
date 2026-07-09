@@ -9,11 +9,20 @@ interface ProgressBarProps {
 }
 
 export default function ProgressBar({ progress, message, running }: ProgressBarProps) {
-  const status = running ? "active" : progress >= 100 ? "success" : "normal";
+  const normalizedProgress = Number.isFinite(progress)
+    ? Math.max(0, Math.min(100, progress))
+    : 0;
+  const hasStarted = running || normalizedProgress > 0 || Boolean(message);
+
+  if (!hasStarted) {
+    return null;
+  }
+
+  const status = running ? "active" : normalizedProgress >= 100 ? "success" : "normal";
 
   return (
     <div className="progress-section">
-      <Progress percent={Math.round(progress)} status={status} size="small" />
+      <Progress percent={Math.round(normalizedProgress)} status={status} size="small" />
       {message && (
         <Text type="secondary" style={{ fontSize: 12 }}>
           {message}

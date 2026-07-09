@@ -79,6 +79,7 @@ class DSCAnalyzer(BaseAnalyzer):
         self.region: List[List[float]] = []
         self.peak: List[List[str]] = []
         self.data: Optional[np.ndarray] = None
+        self.selected_file: Optional[List[str]] = None
 
         # 运行模式设置
         self.test_mode: bool = test_mode
@@ -591,7 +592,15 @@ class DSCAnalyzer(BaseAnalyzer):
         if self.info_callback:
             self.info_callback("处理原数据...")
 
-        file_list = glob.glob(os.path.join(self.data_path, "*.txt"))
+        if self.selected_file is not None:
+            file_list = [
+                os.path.join(self.data_path, filename)
+                for filename in self.selected_file
+                if filename.lower().endswith(".txt")
+            ]
+        else:
+            file_list = glob.glob(os.path.join(self.data_path, "*.txt"))
+
         if not file_list:
             self.logger.warning("数据文件夹中没有相应文件", show_ui=True)
             return False

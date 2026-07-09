@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type AnalyzerType = "gpc" | "mw" | "dsc" | "other";
+export type AnalyzerType = "gpc" | "mw" | "dsc" | "ir" | "other";
 
 interface AnalysisResult {
   success: boolean;
@@ -36,6 +36,7 @@ export const useAnalysisStore = create<AnalysisState>()((set) => ({
     gpc: { ...defaultAnalyzerState },
     mw: { ...defaultAnalyzerState },
     dsc: { ...defaultAnalyzerState },
+    ir: { ...defaultAnalyzerState },
     other: { ...defaultAnalyzerState },
   },
 

@@ -48,6 +48,9 @@ def __getattr__(name: str):
     if name == "MolecularWeightAnalyzer":
         from .mw import MolecularWeightAnalyzer
         return MolecularWeightAnalyzer
+    if name == "IRAnalyzer":
+        from .ir import IRAnalyzer
+        return IRAnalyzer
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 __all__ = [
@@ -82,6 +85,7 @@ __all__ = [
     "BaseAnalyzer",
     "DSCAnalyzer",
     "MolecularWeightAnalyzer",
+    "IRAnalyzer",
     "logger",
     "GPCAnalyzer",
 ]

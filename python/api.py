@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import glob
 import json
 import logging
 import os
@@ -14,9 +13,6 @@ import traceback
 from typing import Any, Callable
 
 from analyzer import (
-    GPCAnalyzer,
-    MolecularWeightAnalyzer,
-    DSCAnalyzer,
     SettingsManager,
     DEFAULT_SETTING_NAME,
     DEFAULT_DSC_SETTING_NAME,
@@ -88,11 +84,31 @@ def _require_param(params: dict[str, Any], key: str, label: str | None = None) -
     return params[key]
 
 
+def _list_files_with_suffix(datadir: str, suffix: str, *, require_datadir: bool = False) -> list[str]:
+    """Return sorted filenames from a directory without importing heavy analyzers."""
+    if not datadir:
+        if require_datadir:
+            raise JsonRpcError(INVALID_PARAMS, "datadir is required")
+        return []
+    if not os.path.isdir(datadir):
+        return []
+    return sorted(
+        [
+            name
+            for name in os.listdir(datadir)
+            if name.lower().endswith(suffix.lower())
+        ],
+        key=str.lower,
+    )
+
+
 # ---------------------------------------------------------------------------
 # GPC handlers
 # ---------------------------------------------------------------------------
 
 def _gpc_analyze(params: dict[str, Any]) -> Any:
+    from analyzer.gpc import GPCAnalyzer
+
     output_filename = _require_param(params, "output_filename")
     selected_files: list[str] | None = params.get("selected_files")
     datadir = params.get("datadir", "")
@@ -121,12 +137,12 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
 
 def _gpc_list_files(params: dict[str, Any]) -> Any:
     datadir = params.get("datadir", "")
-    analyzer = GPCAnalyzer(datadir=datadir, output_filename="")
-    files = analyzer.read_file_list(force_refresh=params.get("force_refresh", False))
-    return {"files": files}
+    return {"files": _list_files_with_suffix(datadir, ".rst")}
 
 
 def _gpc_check_output(params: dict[str, Any]) -> Any:
+    from analyzer.gpc import GPCAnalyzer
+
     output_filename = _require_param(params, "output_filename")
     datadir = params.get("datadir", "")
     analyzer = GPCAnalyzer(datadir=datadir, output_filename=output_filename)
@@ -138,6 +154,10 @@ def _gpc_check_output(params: dict[str, Any]) -> Any:
 # ---------------------------------------------------------------------------
 
 def _mw_analyze(params: dict[str, Any]) -> Any:
+    send_notification("progress", {"progress": 0.01, "message": "Loading MW analyzer"})
+
+    from analyzer.mw import MolecularWeightAnalyzer
+
     selected_files: list[str] | None = params.get("selected_files")
     if not selected_files:
         raise JsonRpcError(INVALID_PARAMS, "selected_files is required and must not be empty")
@@ -177,12 +197,12 @@ def _mw_analyze(params: dict[str, Any]) -> Any:
 
 def _mw_list_files(params: dict[str, Any]) -> Any:
     datadir = params.get("datadir", "")
-    analyzer = MolecularWeightAnalyzer(datadir=datadir)
-    files = analyzer.read_file_list(force_refresh=params.get("force_refresh", False))
-    return {"files": files}
+    return {"files": _list_files_with_suffix(datadir, ".rst")}
 
 
 def _mw_get_segments(params: dict[str, Any]) -> Any:
+    from analyzer.mw import MolecularWeightAnalyzer
+
     datadir = params.get("datadir", "")
     setting_name = params.get("setting_name", DEFAULT_SETTING_NAME)
     analyzer = MolecularWeightAnalyzer(datadir=datadir, setting_name=setting_name)
@@ -190,6 +210,8 @@ def _mw_get_segments(params: dict[str, Any]) -> Any:
 
 
 def _mw_add_segment(params: dict[str, Any]) -> Any:
+    from analyzer.mw import MolecularWeightAnalyzer
+
     position = _require_param(params, "position")
     if not isinstance(position, (int, float)):
         raise JsonRpcError(INVALID_PARAMS, "position must be a number")
@@ -204,6 +226,8 @@ def _mw_add_segment(params: dict[str, Any]) -> Any:
 
 
 def _mw_check_output(params: dict[str, Any]) -> Any:
+    from analyzer.mw import MolecularWeightAnalyzer
+
     selected_files = params.get("selected_files")
     datadir = params.get("datadir", "")
     analyzer = MolecularWeightAnalyzer(datadir=datadir)
@@ -217,9 +241,15 @@ def _mw_check_output(params: dict[str, Any]) -> Any:
 # ---------------------------------------------------------------------------
 
 def _dsc_analyze(params: dict[str, Any]) -> Any:
+    from analyzer.dsc import DSCAnalyzer
+
     datadir = params.get("datadir", "")
     if not datadir:
         raise JsonRpcError(INVALID_PARAMS, "datadir is required for DSC analysis")
+
+    selected_files: list[str] | None = params.get("selected_files")
+    if selected_files is not None and not selected_files:
+        raise JsonRpcError(INVALID_PARAMS, "selected_files must not be empty")
 
     analyzer = DSCAnalyzer(
         datadir=datadir,
@@ -241,6 +271,8 @@ def _dsc_analyze(params: dict[str, Any]) -> Any:
         transparent_back=params.get("transparent_back"),
         progress_callback=_make_progress_callback(),
     )
+    if selected_files is not None:
+        analyzer.selected_file = selected_files
 
     success = analyzer.run()
     if not success:
@@ -254,13 +286,50 @@ def _dsc_analyze(params: dict[str, Any]) -> Any:
 
 def _dsc_list_files(params: dict[str, Any]) -> Any:
     datadir = params.get("datadir", "")
+    return {"files": _list_files_with_suffix(datadir, ".txt", require_datadir=True)}
+
+
+# ---------------------------------------------------------------------------
+# IR handlers
+# ---------------------------------------------------------------------------
+
+def _ir_list_files(params: dict[str, Any]) -> Any:
+    datadir = params.get("datadir", "")
+    return {"files": _list_files_with_suffix(datadir, ".dpt", require_datadir=True)}
+
+
+def _ir_analyze(params: dict[str, Any]) -> Any:
+    from analyzer.ir import IRAnalyzer
+
+    datadir = params.get("datadir", "")
     if not datadir:
-        raise JsonRpcError(INVALID_PARAMS, "datadir is required")
-    files = [
-        os.path.basename(f)
-        for f in glob.glob(os.path.join(datadir, "*.txt"))
-    ]
-    return {"files": files}
+        raise JsonRpcError(INVALID_PARAMS, "datadir is required for IR analysis")
+
+    selected_files: list[str] | None = params.get("selected_files")
+    if not selected_files:
+        raise JsonRpcError(INVALID_PARAMS, "selected_files is required and must not be empty")
+
+    analyzer = IRAnalyzer(
+        datadir=datadir,
+        selected_files=selected_files,
+        curve_color=params.get("curve_color", DEFAULT_BAR_COLOR),
+        line_width=params.get("line_width", 1.0),
+        axis_width=params.get("axis_width", 1.0),
+        title_font_size=params.get("title_font_size", 20),
+        axis_font_size=params.get("axis_font_size", 14),
+        transparent_back=params.get("transparent_back", DEFAULT_TRANSPARENT_BACK),
+        progress_callback=_make_progress_callback(),
+    )
+
+    success = analyzer.run()
+    if not success:
+        raise JsonRpcError(INTERNAL_ERROR, "IR analysis failed")
+    return {
+        "success": True,
+        "output_dir": analyzer.output_dir,
+        "generated_files": analyzer.generated_files,
+        "processed_count": analyzer.processed_count,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -366,6 +435,7 @@ def _system_clean_output(params: dict[str, Any]) -> Any:
         os.path.join(base, "GPC_output"),
         os.path.join(base, "DSC_Cycle"),
         os.path.join(base, "DSC_Pic"),
+        os.path.join(get_install_dir(), "IR_output"),
     ]
     cleaned: list[str] = []
     for dir_path in output_dirs:
@@ -379,6 +449,17 @@ def _system_clean_output(params: dict[str, Any]) -> Any:
 def _system_get_default_datapath(params: dict[str, Any]) -> Any:
     """Return the default datapath under the installation directory."""
     datapath = os.path.join(get_install_dir(), "datapath")
+    os.makedirs(datapath, exist_ok=True)
+    return {"datapath": datapath}
+
+
+def _system_get_default_ir_datapath(params: dict[str, Any]) -> Any:
+    """Return the preferred IR DPT datapath."""
+    install_dir = get_install_dir()
+    sibling_ir = os.path.join(os.path.dirname(install_dir), "IR")
+    if os.path.isdir(sibling_ir):
+        return {"datapath": sibling_ir}
+    datapath = os.path.join(install_dir, "datapath")
     os.makedirs(datapath, exist_ok=True)
     return {"datapath": datapath}
 
@@ -398,6 +479,8 @@ METHOD_TABLE: dict[str, MethodHandler] = {
     "mw.check_output": _mw_check_output,
     "dsc.analyze": _dsc_analyze,
     "dsc.list_files": _dsc_list_files,
+    "ir.analyze": _ir_analyze,
+    "ir.list_files": _ir_list_files,
     "settings.load": _settings_load,
     "settings.save": _settings_save,
     "settings.delete": _settings_delete,
@@ -405,6 +488,7 @@ METHOD_TABLE: dict[str, MethodHandler] = {
     "system.open_folder": _system_open_folder,
     "system.clean_output": _system_clean_output,
     "system.get_default_datapath": _system_get_default_datapath,
+    "system.get_default_ir_datapath": _system_get_default_ir_datapath,
 }
 
 

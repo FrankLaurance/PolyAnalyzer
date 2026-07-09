@@ -48,6 +48,11 @@ HIDDEN_IMPORTS = [
     "openpyxl",
     "chardet",
     "plottable",
+    "analyzer.gpc",
+    "analyzer.mw",
+    "analyzer.dsc",
+    "analyzer.ir",
+    "analyzer.plotting",
 ]
 
 EXCLUDED_MODULES = [

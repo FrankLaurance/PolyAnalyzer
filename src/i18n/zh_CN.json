@@ -15,6 +15,7 @@
   "tab_mw": "Mw",
   "tab_gpc": "GPC",
   "tab_dsc": "DSC",
+  "tab_ir": "IR",
   "tab_other": "其他",
 
   "save_segment_data": "保存分段数据",
@@ -69,6 +70,11 @@
   "display_image": "显示图片",
   "save_sample_info": "保存样品信息",
   "save_plot_data": "保存画图数据",
+  "ir_dpt_files": "DPT 文件列表",
+  "ir_no_dpt_files": "当前文件夹没有 .dpt 文件",
+  "ir_output_folder": "IR 输出文件夹",
+  "ir_generated_files": "生成 {{count}} 个文件",
+  "ir_processed_count": "处理 {{count}} 个样品",
 
   "clean_folder": "清理文件夹",
   "run_clean": "执行清理",

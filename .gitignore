@@ -40,6 +40,7 @@ DSC_Cycle/
 DSC_Pic/
 GPC_output/
 Mw_output/
+IR_output/
 
 # Tauri
 src-tauri/gen/

@@ -5,6 +5,7 @@ import Header from "./components/layout/Header";
 import GpcPanel from "./components/gpc/GpcPanel";
 import MwPanel from "./components/mw/MwPanel";
 import DscPanel from "./components/dsc/DscPanel";
+import IrPanel from "./components/ir/IrPanel";
 import OtherPanel from "./components/other/OtherPanel";
 import "./App.css";
 
@@ -16,10 +17,11 @@ function App() {
   const [activeTab, setActiveTab] = useState("gpc");
 
   const tabItems = [
-    { key: "gpc", label: t("tab_gpc"), children: <GpcPanel /> },
-    { key: "mw", label: t("tab_mw"), children: <MwPanel /> },
-    { key: "dsc", label: t("tab_dsc"), children: <DscPanel /> },
-    { key: "other", label: t("tab_other"), children: <OtherPanel /> },
+    { key: "gpc", label: t("tab_gpc"), children: activeTab === "gpc" ? <GpcPanel /> : null },
+    { key: "mw", label: t("tab_mw"), children: activeTab === "mw" ? <MwPanel /> : null },
+    { key: "dsc", label: t("tab_dsc"), children: activeTab === "dsc" ? <DscPanel /> : null },
+    { key: "ir", label: t("tab_ir"), children: activeTab === "ir" ? <IrPanel /> : null },
+    { key: "other", label: t("tab_other"), children: activeTab === "other" ? <OtherPanel /> : null },
   ];
 
   return (
@@ -33,6 +35,7 @@ function App() {
             items={tabItems}
             type="card"
             size="large"
+            destroyOnHidden
           />
         </Content>
         <Sider className="app-sider" width={240} theme="light" style={{ background: 'var(--color-surface)' }}>

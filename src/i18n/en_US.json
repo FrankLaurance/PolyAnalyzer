@@ -15,6 +15,7 @@
   "tab_mw": "Mw",
   "tab_gpc": "GPC",
   "tab_dsc": "DSC",
+  "tab_ir": "IR",
   "tab_other": "Other",
 
   "save_segment_data": "Save Segment Data",
@@ -69,6 +70,11 @@
   "display_image": "Display Image",
   "save_sample_info": "Save Sample Info",
   "save_plot_data": "Save Plot Data",
+  "ir_dpt_files": "DPT Files",
+  "ir_no_dpt_files": "No .dpt files in the current folder",
+  "ir_output_folder": "IR Output Folder",
+  "ir_generated_files": "{{count}} files generated",
+  "ir_processed_count": "{{count}} samples processed",
 
   "clean_folder": "Clean Folder",
   "run_clean": "Run Clean",

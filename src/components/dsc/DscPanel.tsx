@@ -7,6 +7,7 @@ import {
   Slider,
   ColorPicker,
   Space,
+  Select,
   message,
 } from "antd";
 import {
@@ -39,6 +40,8 @@ export default function DscPanel() {
   } = useSettingsStore();
 
   const [folderPath, setFolderPath] = useState("");
+  const [fileList, setFileList] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [saveSegmentData, setSaveSegmentData] = useState(true);
   const [drawSegmentCurve, setDrawSegmentCurve] = useState(true);
   const [drawCycleComparison, setDrawCycleComparison] = useState(true);
@@ -62,6 +65,7 @@ export default function DscPanel() {
       const dp = (res as { datapath: string })?.datapath;
       if (dp) {
         setFolderPath(dp);
+        loadFiles(dp);
       }
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -70,7 +74,24 @@ export default function DscPanel() {
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
-      setFolderPath(selected as string);
+      const path = selected as string;
+      setFolderPath(path);
+      await loadFiles(path);
+    }
+  };
+
+  const loadFiles = async (path: string) => {
+    try {
+      const res = (await sendRequest("dsc.list_files", {
+        datadir: path,
+      })) as { files: string[] };
+      const files = res?.files ?? [];
+      setFileList(files);
+      setSelectedFiles(files);
+    } catch (err) {
+      setFileList([]);
+      setSelectedFiles([]);
+      message.error(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -79,12 +100,17 @@ export default function DscPanel() {
       message.warning(t("invalid_path"));
       return;
     }
+    if (selectedFiles.length === 0) {
+      message.warning(t("select_at_least_one"));
+      return;
+    }
     const startTime = Date.now();
     reset("dsc");
     setRunning("dsc", true);
     try {
       const result = await sendRequest("dsc.analyze", {
         datadir: folderPath,
+        selected_files: selectedFiles,
         save_seg_mode: saveSegmentData,
         draw_seg_mode: drawSegmentCurve,
         draw_cycle: drawCycleComparison,
@@ -141,12 +167,26 @@ export default function DscPanel() {
             className="folder-input"
             value={folderPath}
             onChange={(e) => setFolderPath(e.target.value)}
+            onBlur={() => folderPath && loadFiles(folderPath)}
             placeholder={t("data_folder")}
           />
           <Button icon={<FolderOpenOutlined />} onClick={handleBrowse}>
             {t("open_folder")}
           </Button>
         </div>
+      </div>
+
+      {/* File list */}
+      <div className="panel-section">
+        <label className="panel-section-title">{t("file_list")}</label>
+        <Select
+          mode="multiple"
+          className="file-list-select"
+          value={selectedFiles}
+          onChange={setSelectedFiles}
+          options={fileList.map((file) => ({ label: file, value: file }))}
+          placeholder={t("file_list")}
+        />
       </div>
 
       {/* Options — with dependency logic matching original */}
