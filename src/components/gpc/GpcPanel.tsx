@@ -4,7 +4,7 @@ import {
   Input,
   Checkbox,
   Select,
-  Collapse,
+  Alert,
   Space,
   message,
 } from "antd";
@@ -15,35 +15,36 @@ import {
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
+import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
-import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
-import SettingsPanel from "../common/SettingsPanel";
 
 export default function GpcPanel() {
   const { t } = useTranslation();
-  const { sendRequest, lastProgress } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge("gpc");
   const analyzer = useAnalysisStore((s) => s.analyzers.gpc);
   const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
-  const { savedSettings, loadSettings, saveSettings, deleteSettings } =
-    useSettingsStore();
 
   const [folderPath, setFolderPath] = useState("");
   const [outputFilename, setOutputFilename] = useState(
     () => new Date().toISOString().slice(0, 10).replace(/-/g, "")
   );
-  const [fileList, setFileList] = useState<string[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const {
+    fileList,
+    selectedFiles,
+    setSelectedFiles,
+    filesLoading,
+    fileError,
+    clearFiles,
+    loadFiles,
+  } = useAnalyzerFiles(sendRequest, "gpc.list_files");
   const [saveSampleInfo, setSaveSampleInfo] = useState(true);
   const [saveImage, setSaveImage] = useState(true);
-  const [displayImage, setDisplayImage] = useState(true);
   const [savePlotData, setSavePlotData] = useState(false);
   const [selectPartial, setSelectPartial] = useState(false);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
-  const [currentSetting, setCurrentSetting] = useState<string>("default");
   const [outputDir, setOutputDir] = useState("");
 
   useEffect(() => {
@@ -53,42 +54,38 @@ export default function GpcPanel() {
   }, [analyzer.running, lastProgress, setProgress]);
 
   useEffect(() => {
-    sendRequest("system.get_default_datapath", {}).then((res) => {
-      const dp = (res as { datapath: string })?.datapath;
-      if (dp) {
-        setFolderPath(dp);
-        loadFiles(dp);
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    sendRequest("system.get_default_datapath", {})
+      .then((res) => {
+        const dp = (res as { datapath: string })?.datapath;
+        if (dp) {
+          setFolderPath(dp);
+          void loadFiles(dp);
+        }
+      })
+      .catch((error) => message.error(getErrorMessage(error)));
+  }, [loadFiles, sendRequest]);
+
+  const handleFolderPathChange = (path: string) => {
+    setFolderPath(path);
+    clearFiles();
+  };
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
-      setFolderPath(selected as string);
-      await loadFiles(selected as string);
-    }
-  };
-
-  const loadFiles = async (path: string) => {
-    try {
-      const res = (await sendRequest("gpc.list_files", {
-        datadir: path,
-      })) as { files: string[] };
-      const result = res?.files;
-      setFileList(result ?? []);
-      setSelectedFiles(result ?? []);
-    } catch (err) {
-      setFileList([]);
-      setSelectedFiles([]);
-      message.error(err instanceof Error ? err.message : String(err));
+      const path = selected as string;
+      handleFolderPathChange(path);
+      await loadFiles(path);
     }
   };
 
   const handleRun = async () => {
     if (!folderPath) {
       message.warning(t("invalid_path"));
+      return;
+    }
+    if (selectPartial && selectedFiles.length === 0) {
+      message.warning(t("select_at_least_one"));
       return;
     }
     const fname = outputFilename.trim() || new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -102,26 +99,27 @@ export default function GpcPanel() {
         selected_files: selectPartial ? selectedFiles : undefined,
         save_file: saveSampleInfo,
         save_picture: saveImage,
-        display_mode: displayImage,
+        display_mode: false,
         save_figure_file_gpc: savePlotData,
         confirm_overwrite: confirmOverwrite,
       });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const res = result as { output_dir?: string };
       if (res?.output_dir) setOutputDir(res.output_dir);
-      setProgress("gpc", 100, t("complete", { time: elapsed + "s" }));
+      setProgress("gpc", 100, t("complete", { time: elapsed }));
       setResult("gpc", {
         success: true,
         message: "GPC analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: elapsed + "s" }));
+      message.success(t("complete", { time: elapsed }));
     } catch (err) {
+      const errorMessage = getErrorMessage(err);
       setResult("gpc", {
         success: false,
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage,
       });
-      message.error(String(err));
+      message.error(errorMessage);
     }
   };
 
@@ -130,8 +128,8 @@ export default function GpcPanel() {
     if (!target) return;
     try {
       await invoke("open_folder", { path: target });
-    } catch {
-      try { await openPath(target); } catch { /* ignore */ }
+    } catch (error) {
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -144,11 +142,16 @@ export default function GpcPanel() {
           <Input
             className="folder-input"
             value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            onBlur={() => folderPath && loadFiles(folderPath)}
+            onChange={(e) => handleFolderPathChange(e.target.value)}
+            onBlur={() => folderPath && void loadFiles(folderPath)}
             placeholder={t("data_folder")}
+            disabled={analyzer.running}
           />
-          <Button icon={<FolderOpenOutlined />} onClick={handleBrowse}>
+          <Button
+            icon={<FolderOpenOutlined />}
+            onClick={handleBrowse}
+            disabled={analyzer.running}
+          >
             {t("open_folder")}
           </Button>
         </div>
@@ -180,12 +183,6 @@ export default function GpcPanel() {
             {t("save_image")}
           </Checkbox>
           <Checkbox
-            checked={displayImage}
-            onChange={(e) => setDisplayImage(e.target.checked)}
-          >
-            {t("display_image")}
-          </Checkbox>
-          <Checkbox
             checked={savePlotData}
             onChange={(e) => setSavePlotData(e.target.checked)}
           >
@@ -193,6 +190,7 @@ export default function GpcPanel() {
           </Checkbox>
           <Checkbox
             checked={selectPartial}
+            disabled={analyzer.running}
             onChange={(e) => setSelectPartial(e.target.checked)}
           >
             {t("select_partial_files")}
@@ -208,10 +206,12 @@ export default function GpcPanel() {
           className="file-list-select"
           value={selectedFiles}
           onChange={setSelectedFiles}
-          disabled={!selectPartial}
+          disabled={!selectPartial || analyzer.running}
+          loading={filesLoading}
           options={fileList.map((f) => ({ label: f, value: f }))}
           placeholder={t("file_list")}
         />
+        {fileError && <Alert type="error" showIcon message={fileError} />}
       </div>
 
       {/* Overwrite confirmation */}
@@ -243,37 +243,9 @@ export default function GpcPanel() {
           progress={analyzer.progress}
           message={analyzer.message}
           running={analyzer.running}
+          failed={analyzer.result?.success === false}
         />
       </div>
-
-      {/* Settings */}
-      <Collapse
-        className="settings-collapse"
-        items={[
-          {
-            key: "settings",
-            label: t("settings"),
-            children: (
-              <SettingsPanel
-                settingsList={Object.keys(savedSettings)}
-                currentSetting={currentSetting}
-                onSwitch={(name) => {
-                  setCurrentSetting(name);
-                  loadSettings(name);
-                }}
-                onSave={(name) => {
-                  saveSettings(name);
-                  setCurrentSetting(name);
-                }}
-                onDelete={(name) => {
-                  deleteSettings(name);
-                  setCurrentSetting("");
-                }}
-              />
-            ),
-          },
-        ]}
-      />
     </div>
   );
 }

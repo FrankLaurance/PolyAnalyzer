@@ -9,6 +9,7 @@ import {
   ColorPicker,
   Space,
   InputNumber,
+  Alert,
   message,
 } from "antd";
 import {
@@ -19,9 +20,9 @@ import {
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
+import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
@@ -33,23 +34,27 @@ const DEFAULT_SEGMENT_POSITIONS = [
 
 export default function MwPanel() {
   const { t } = useTranslation();
-  const { sendRequest, lastProgress } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge("mw");
   const analyzer = useAnalysisStore((s) => s.analyzers.mw);
   const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
-  const {
-    analyzerSettings,
-    updateAnalyzerSettings,
-    savedSettings,
-    loadSettings,
-    saveSettings,
-    deleteSettings,
-  } = useSettingsStore();
+  const analyzerSettings = useSettingsStore((s) => s.analyzerSettings.mw);
+  const savedSettings = useSettingsStore((s) => s.savedSettings.mw);
+  const updateAnalyzerSettings = useSettingsStore((s) => s.updateAnalyzerSettings);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const saveSettings = useSettingsStore((s) => s.saveSettings);
+  const deleteSettings = useSettingsStore((s) => s.deleteSettings);
 
   const [folderPath, setFolderPath] = useState("");
-  const [fileList, setFileList] = useState<string[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const {
+    fileList,
+    selectedFiles,
+    setSelectedFiles,
+    filesLoading,
+    fileError,
+    clearFiles,
+    loadFiles,
+  } = useAnalyzerFiles(sendRequest, "mw.list_files");
   const [saveImage, setSaveImage] = useState(true);
-  const [displayImage, setDisplayImage] = useState(true);
   const [allPositions, setAllPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
   const [selectedPositions, setSelectedPositions] = useState<number[]>([...DEFAULT_SEGMENT_POSITIONS]);
   const [newPosition, setNewPosition] = useState<number | null>(null);
@@ -63,34 +68,28 @@ export default function MwPanel() {
   }, [analyzer.running, lastProgress, setProgress]);
 
   useEffect(() => {
-    sendRequest("system.get_default_datapath", {}).then((res) => {
-      const dp = (res as { datapath: string })?.datapath;
-      if (dp) {
-        setFolderPath(dp);
-        loadFiles(dp);
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    sendRequest("system.get_default_datapath", {})
+      .then((res) => {
+        const dp = (res as { datapath: string })?.datapath;
+        if (dp) {
+          setFolderPath(dp);
+          void loadFiles(dp);
+        }
+      })
+      .catch((error) => message.error(getErrorMessage(error)));
+  }, [loadFiles, sendRequest]);
+
+  const handleFolderPathChange = (path: string) => {
+    setFolderPath(path);
+    clearFiles();
+  };
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
-      setFolderPath(selected as string);
-      await loadFiles(selected as string);
-    }
-  };
-
-  const loadFiles = async (path: string) => {
-    try {
-      const res = (await sendRequest("mw.list_files", {
-        datadir: path,
-      })) as { files: string[] };
-      const result = res?.files;
-      setFileList(result ?? []);
-      setSelectedFiles(result ?? []);
-    } catch {
-      setFileList([]);
+      const path = selected as string;
+      handleFolderPathChange(path);
+      await loadFiles(path);
     }
   };
 
@@ -120,7 +119,7 @@ export default function MwPanel() {
         datadir: folderPath,
         selected_files: selectedFiles,
         save_picture: saveImage,
-        display_picture: displayImage,
+        display_picture: false,
         segmentpos: selectedPositions,
         bar_color: analyzerSettings.barColor,
         mw_color: analyzerSettings.mwColor,
@@ -137,19 +136,20 @@ export default function MwPanel() {
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const res = result as { output_dir?: string };
       if (res?.output_dir) setOutputDir(res.output_dir);
-      setProgress("mw", 100, t("complete", { time: elapsed + "s" }));
+      setProgress("mw", 100, t("complete", { time: elapsed }));
       setResult("mw", {
         success: true,
         message: "Mw analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: elapsed + "s" }));
+      message.success(t("complete", { time: elapsed }));
     } catch (err) {
+      const errorMessage = getErrorMessage(err);
       setResult("mw", {
         success: false,
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage,
       });
-      message.error(String(err));
+      message.error(errorMessage);
     }
   };
 
@@ -158,8 +158,8 @@ export default function MwPanel() {
     if (!target) return;
     try {
       await invoke("open_folder", { path: target });
-    } catch {
-      try { await openPath(target); } catch { /* ignore */ }
+    } catch (error) {
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -172,11 +172,16 @@ export default function MwPanel() {
           <Input
             className="folder-input"
             value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            onBlur={() => folderPath && loadFiles(folderPath)}
+            onChange={(e) => handleFolderPathChange(e.target.value)}
+            onBlur={() => folderPath && void loadFiles(folderPath)}
             placeholder={t("data_folder")}
+            disabled={analyzer.running}
           />
-          <Button icon={<FolderOpenOutlined />} onClick={handleBrowse}>
+          <Button
+            icon={<FolderOpenOutlined />}
+            onClick={handleBrowse}
+            disabled={analyzer.running}
+          >
             {t("open_folder")}
           </Button>
         </div>
@@ -190,12 +195,6 @@ export default function MwPanel() {
             onChange={(e) => setSaveImage(e.target.checked)}
           >
             {t("save_image")}
-          </Checkbox>
-          <Checkbox
-            checked={displayImage}
-            onChange={(e) => setDisplayImage(e.target.checked)}
-          >
-            {t("display_image")}
           </Checkbox>
         </div>
       </div>
@@ -213,7 +212,7 @@ export default function MwPanel() {
                   <Checkbox
                     checked={analyzerSettings.drawBar}
                     onChange={(e) =>
-                      updateAnalyzerSettings({ drawBar: e.target.checked })
+                      updateAnalyzerSettings("mw", { drawBar: e.target.checked })
                     }
                   >
                     {t("draw_bar")}
@@ -221,7 +220,7 @@ export default function MwPanel() {
                   <Checkbox
                     checked={analyzerSettings.drawMw}
                     onChange={(e) =>
-                      updateAnalyzerSettings({ drawMw: e.target.checked })
+                      updateAnalyzerSettings("mw", { drawMw: e.target.checked })
                     }
                   >
                     {t("draw_mw")}
@@ -229,7 +228,7 @@ export default function MwPanel() {
                   <Checkbox
                     checked={analyzerSettings.drawTable}
                     onChange={(e) =>
-                      updateAnalyzerSettings({ drawTable: e.target.checked })
+                      updateAnalyzerSettings("mw", { drawTable: e.target.checked })
                     }
                   >
                     {t("draw_table")}
@@ -237,7 +236,7 @@ export default function MwPanel() {
                   <Checkbox
                     checked={analyzerSettings.transparentBackground}
                     onChange={(e) =>
-                      updateAnalyzerSettings({
+                      updateAnalyzerSettings("mw", {
                         transparentBackground: e.target.checked,
                       })
                     }
@@ -251,7 +250,7 @@ export default function MwPanel() {
                   <ColorPicker
                     value={analyzerSettings.barColor}
                     onChange={(c) =>
-                      updateAnalyzerSettings({ barColor: c.toHexString() })
+                      updateAnalyzerSettings("mw", { barColor: c.toHexString() })
                     }
                   />
                 </div>
@@ -260,7 +259,7 @@ export default function MwPanel() {
                   <ColorPicker
                     value={analyzerSettings.mwColor}
                     onChange={(c) =>
-                      updateAnalyzerSettings({ mwColor: c.toHexString() })
+                      updateAnalyzerSettings("mw", { mwColor: c.toHexString() })
                     }
                   />
                 </div>
@@ -272,7 +271,7 @@ export default function MwPanel() {
                     max={2.0}
                     step={0.1}
                     value={analyzerSettings.barWidth}
-                    onChange={(v) => updateAnalyzerSettings({ barWidth: v })}
+                    onChange={(v) => updateAnalyzerSettings("mw", { barWidth: v })}
                   />
                 </div>
                 <div className="slider-row">
@@ -282,7 +281,7 @@ export default function MwPanel() {
                     max={2.0}
                     step={0.1}
                     value={analyzerSettings.lineWidth}
-                    onChange={(v) => updateAnalyzerSettings({ lineWidth: v })}
+                    onChange={(v) => updateAnalyzerSettings("mw", { lineWidth: v })}
                   />
                 </div>
                 <div className="slider-row">
@@ -292,7 +291,7 @@ export default function MwPanel() {
                     max={2.0}
                     step={0.1}
                     value={analyzerSettings.axisWidth}
-                    onChange={(v) => updateAnalyzerSettings({ axisWidth: v })}
+                    onChange={(v) => updateAnalyzerSettings("mw", { axisWidth: v })}
                   />
                 </div>
                 <div className="slider-row">
@@ -303,7 +302,7 @@ export default function MwPanel() {
                     step={1}
                     value={analyzerSettings.titleFontSize}
                     onChange={(v) =>
-                      updateAnalyzerSettings({ titleFontSize: v })
+                      updateAnalyzerSettings("mw", { titleFontSize: v })
                     }
                   />
                 </div>
@@ -315,7 +314,7 @@ export default function MwPanel() {
                     step={1}
                     value={analyzerSettings.axisFontSize}
                     onChange={(v) =>
-                      updateAnalyzerSettings({ axisFontSize: v })
+                      updateAnalyzerSettings("mw", { axisFontSize: v })
                     }
                   />
                 </div>
@@ -376,9 +375,12 @@ export default function MwPanel() {
           className="file-list-select"
           value={selectedFiles}
           onChange={setSelectedFiles}
+          disabled={analyzer.running}
+          loading={filesLoading}
           options={fileList.map((f) => ({ label: f, value: f }))}
           placeholder={t("file_list")}
         />
+        {fileError && <Alert type="error" showIcon message={fileError} />}
       </div>
 
       {/* Actions */}
@@ -400,6 +402,7 @@ export default function MwPanel() {
           progress={analyzer.progress}
           message={analyzer.message}
           running={analyzer.running}
+          failed={analyzer.result?.success === false}
         />
       </div>
 
@@ -416,14 +419,14 @@ export default function MwPanel() {
                 currentSetting={currentSetting}
                 onSwitch={(name) => {
                   setCurrentSetting(name);
-                  loadSettings(name);
+                  loadSettings("mw", name);
                 }}
                 onSave={(name) => {
-                  saveSettings(name);
+                  saveSettings("mw", name);
                   setCurrentSetting(name);
                 }}
                 onDelete={(name) => {
-                  deleteSettings(name);
+                  deleteSettings("mw", name);
                   setCurrentSetting("");
                 }}
               />

@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import i18n from "../i18n";
 
+export type SettingsAnalyzer = "mw" | "dsc" | "ir";
+
 export interface AnalyzerSettings {
   barColor: string;
   mwColor: string;
@@ -15,6 +17,9 @@ export interface AnalyzerSettings {
   axisWidth: number;
   titleFontSize: number;
   axisFontSize: number;
+  drawOverlay: boolean;
+  normalizeOverlay: boolean;
+  normalizationPeak: number;
 }
 
 export const defaultAnalyzerSettings: AnalyzerSettings = {
@@ -30,27 +35,130 @@ export const defaultAnalyzerSettings: AnalyzerSettings = {
   axisWidth: 1.0,
   titleFontSize: 20,
   axisFontSize: 14,
+  drawOverlay: true,
+  normalizeOverlay: true,
+  normalizationPeak: 1450,
 };
+
+const defaultIrAnalyzerSettings: AnalyzerSettings = {
+  ...defaultAnalyzerSettings,
+  curveColor: "#D62728",
+};
+
+type AnalyzerSettingsMap = Record<SettingsAnalyzer, AnalyzerSettings>;
+type SavedSettingsMap = Record<SettingsAnalyzer, Record<string, AnalyzerSettings>>;
 
 interface SettingsState {
   language: string;
-  analyzerSettings: AnalyzerSettings;
-  savedSettings: Record<string, AnalyzerSettings>;
+  analyzerSettings: AnalyzerSettingsMap;
+  savedSettings: SavedSettingsMap;
   setLanguage: (lang: string) => void;
-  updateAnalyzerSettings: (patch: Partial<AnalyzerSettings>) => void;
-  saveSettings: (name: string) => void;
-  loadSettings: (name: string) => void;
-  deleteSettings: (name: string) => void;
+  updateAnalyzerSettings: (
+    analyzer: SettingsAnalyzer,
+    patch: Partial<AnalyzerSettings>,
+  ) => void;
+  saveSettings: (analyzer: SettingsAnalyzer, name: string) => void;
+  loadSettings: (analyzer: SettingsAnalyzer, name: string) => void;
+  deleteSettings: (analyzer: SettingsAnalyzer, name: string) => void;
+}
+
+const ANALYZERS: SettingsAnalyzer[] = ["mw", "dsc", "ir"];
+
+function getDefaultSettings(analyzer: SettingsAnalyzer): AnalyzerSettings {
+  return analyzer === "ir"
+    ? { ...defaultIrAnalyzerSettings }
+    : { ...defaultAnalyzerSettings };
+}
+
+function createSettingsMap(): AnalyzerSettingsMap {
+  return {
+    mw: getDefaultSettings("mw"),
+    dsc: getDefaultSettings("dsc"),
+    ir: getDefaultSettings("ir"),
+  };
+}
+
+function createSavedSettingsMap(): SavedSettingsMap {
+  return {
+    mw: { default: getDefaultSettings("mw") },
+    dsc: { default: getDefaultSettings("dsc") },
+    ir: { default: getDefaultSettings("ir") },
+  };
+}
+
+function mergeSettings(
+  analyzer: SettingsAnalyzer,
+  value: Partial<AnalyzerSettings>,
+): AnalyzerSettings {
+  const defaults = getDefaultSettings(analyzer);
+  const source = value && typeof value === "object" ? value : {};
+  const migrated = { ...defaults, ...source };
+
+  // Before overlay settings existed, IR inherited the shared blue curve default.
+  if (analyzer === "ir" && !("drawOverlay" in source)) {
+    migrated.curveColor = defaults.curveColor;
+  }
+  return migrated;
+}
+
+function hasAnalyzerKeys(value: unknown): value is Record<SettingsAnalyzer, unknown> {
+  return Boolean(
+    value
+      && typeof value === "object"
+      && ANALYZERS.every((analyzer) => analyzer in value),
+  );
+}
+
+function normalizeAnalyzerSettings(value: unknown): AnalyzerSettingsMap {
+  const defaults = createSettingsMap();
+  if (hasAnalyzerKeys(value)) {
+    ANALYZERS.forEach((analyzer) => {
+      defaults[analyzer] = mergeSettings(
+        analyzer,
+        value[analyzer] as Partial<AnalyzerSettings>,
+      );
+    });
+    return defaults;
+  }
+
+  if (value && typeof value === "object") {
+    const legacy = value as Partial<AnalyzerSettings>;
+    ANALYZERS.forEach((analyzer) => {
+      defaults[analyzer] = mergeSettings(analyzer, legacy);
+    });
+  }
+  return defaults;
+}
+
+function normalizeSavedSettings(value: unknown): SavedSettingsMap {
+  const defaults = createSavedSettingsMap();
+  const source = hasAnalyzerKeys(value)
+    ? value
+    : value && typeof value === "object"
+      ? { mw: value, dsc: value, ir: value }
+      : null;
+
+  if (!source) return defaults;
+  ANALYZERS.forEach((analyzer) => {
+    const saved = source[analyzer];
+    if (!saved || typeof saved !== "object") return;
+    Object.entries(saved).forEach(([name, settings]) => {
+      if (!settings || typeof settings !== "object") return;
+      defaults[analyzer][name] = mergeSettings(
+        analyzer,
+        settings as Partial<AnalyzerSettings>,
+      );
+    });
+  });
+  return defaults;
 }
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       language: localStorage.getItem("polyanalyzer-language") || "zh_CN",
-      analyzerSettings: { ...defaultAnalyzerSettings },
-      savedSettings: {
-        default: { ...defaultAnalyzerSettings },
-      },
+      analyzerSettings: createSettingsMap(),
+      savedSettings: createSavedSettingsMap(),
 
       setLanguage: (lang: string) => {
         i18n.changeLanguage(lang);
@@ -58,47 +166,65 @@ export const useSettingsStore = create<SettingsState>()(
         set({ language: lang });
       },
 
-      updateAnalyzerSettings: (patch: Partial<AnalyzerSettings>) => {
-        set((s) => ({
-          analyzerSettings: { ...s.analyzerSettings, ...patch },
-        }));
-      },
-
-      saveSettings: (name: string) => {
-        set((s) => ({
-          savedSettings: {
-            ...s.savedSettings,
-            [name]: { ...s.analyzerSettings },
+      updateAnalyzerSettings: (analyzer, patch) => {
+        set((state) => ({
+          analyzerSettings: {
+            ...state.analyzerSettings,
+            [analyzer]: { ...state.analyzerSettings[analyzer], ...patch },
           },
         }));
       },
 
-      loadSettings: (name: string) => {
-        const saved = get().savedSettings[name];
-        if (saved) {
-          set({ analyzerSettings: { ...saved } });
-        }
+      saveSettings: (analyzer, name) => {
+        set((state) => ({
+          savedSettings: {
+            ...state.savedSettings,
+            [analyzer]: {
+              ...state.savedSettings[analyzer],
+              [name]: { ...state.analyzerSettings[analyzer] },
+            },
+          },
+        }));
       },
 
-      deleteSettings: (name: string) => {
-        set((s) => {
-          const next = { ...s.savedSettings };
-          delete next[name];
-          return { savedSettings: next };
+      loadSettings: (analyzer, name) => {
+        const saved = get().savedSettings[analyzer][name];
+        if (!saved) return;
+        set((state) => ({
+          analyzerSettings: {
+            ...state.analyzerSettings,
+            [analyzer]: { ...saved },
+          },
+        }));
+      },
+
+      deleteSettings: (analyzer, name) => {
+        if (name === "default") return;
+        set((state) => {
+          const analyzerSettings = { ...state.savedSettings[analyzer] };
+          delete analyzerSettings[name];
+          return {
+            savedSettings: {
+              ...state.savedSettings,
+              [analyzer]: analyzerSettings,
+            },
+          };
         });
       },
     }),
     {
       name: "polyanalyzer-settings",
       merge: (persisted, current) => {
-        const p = persisted as Partial<SettingsState> | undefined;
+        const saved = persisted as {
+          language?: string;
+          analyzerSettings?: unknown;
+          savedSettings?: unknown;
+        } | undefined;
         return {
-          ...(current as SettingsState),
-          ...p,
-          savedSettings: {
-            default: { ...defaultAnalyzerSettings },
-            ...(p?.savedSettings ?? {}),
-          },
+          ...current,
+          language: saved?.language ?? current.language,
+          analyzerSettings: normalizeAnalyzerSettings(saved?.analyzerSettings),
+          savedSettings: normalizeSavedSettings(saved?.savedSettings),
         };
       },
     },

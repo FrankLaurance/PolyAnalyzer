@@ -21,6 +21,7 @@ from analyzer import (
     DEFAULT_TRANSPARENT_BACK,
     get_install_dir,
 )
+from analyzer.base import resolve_contained_file, validate_basename
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ class JsonRpcError(Exception):
         return err
 
 
-def _write_response(response: dict[str, Any]) -> None:
+def _write_response(response: dict[str, Any] | list[dict[str, Any]]) -> None:
     """Write a JSON-RPC response to stdout."""
     line = json.dumps(response, ensure_ascii=False)
     sys.stdout.write(line + "\n")
@@ -68,11 +69,24 @@ def send_notification(method: str, params: dict[str, Any] | None = None) -> None
     _write_response(msg)
 
 
-def _make_progress_callback() -> Callable[[float, str], None]:
+def _make_progress_callback(
+    params: dict[str, Any],
+    analyzer: str,
+) -> Callable[[float, str], None]:
     """Create a progress callback that emits JSON-RPC notifications."""
 
+    request_id = params.get("__request_id")
+
     def callback(progress: float, message: str) -> None:
-        send_notification("progress", {"progress": progress, "message": message})
+        send_notification(
+            "progress",
+            {
+                "progress": progress,
+                "message": message,
+                "analyzer": analyzer,
+                "request_id": request_id,
+            },
+        )
 
     return callback
 
@@ -82,6 +96,39 @@ def _require_param(params: dict[str, Any], key: str, label: str | None = None) -
     if key not in params:
         raise JsonRpcError(INVALID_PARAMS, f"Missing required parameter: {label or key}")
     return params[key]
+
+
+def _validate_selected_files(
+    datadir: str,
+    selected_files: Any,
+    suffix: str,
+    *,
+    required: bool,
+) -> list[str] | None:
+    """Validate selected input names before an analyzer touches the filesystem."""
+    if selected_files is None:
+        if required:
+            raise JsonRpcError(INVALID_PARAMS, "selected_files is required")
+        return None
+    if not isinstance(selected_files, list) or not selected_files:
+        raise JsonRpcError(INVALID_PARAMS, "selected_files must be a non-empty list")
+    if not isinstance(datadir, str) or not os.path.isdir(datadir):
+        raise JsonRpcError(INVALID_PARAMS, "datadir must be an existing directory")
+
+    validated: list[str] = []
+    for name in selected_files:
+        try:
+            validate_basename(name, "selected filename")
+        except (TypeError, ValueError) as exc:
+            raise JsonRpcError(INVALID_PARAMS, str(exc)) from exc
+        if not name.lower().endswith(suffix.lower()):
+            raise JsonRpcError(INVALID_PARAMS, f"selected filename must end with {suffix}")
+        try:
+            resolve_contained_file(datadir, name, "selected filename")
+        except (OSError, TypeError, ValueError) as exc:
+            raise JsonRpcError(INVALID_PARAMS, str(exc)) from exc
+        validated.append(name)
+    return validated
 
 
 def _list_files_with_suffix(datadir: str, suffix: str, *, require_datadir: bool = False) -> list[str]:
@@ -97,6 +144,8 @@ def _list_files_with_suffix(datadir: str, suffix: str, *, require_datadir: bool 
             name
             for name in os.listdir(datadir)
             if name.lower().endswith(suffix.lower())
+            and os.path.isfile(os.path.join(datadir, name))
+            and not os.path.islink(os.path.join(datadir, name))
         ],
         key=str.lower,
     )
@@ -110,8 +159,13 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
     from analyzer.gpc import GPCAnalyzer
 
     output_filename = _require_param(params, "output_filename")
-    selected_files: list[str] | None = params.get("selected_files")
     datadir = params.get("datadir", "")
+    selected_files = _validate_selected_files(
+        datadir,
+        params.get("selected_files"),
+        ".rst",
+        required=False,
+    )
     confirm_overwrite = params.get("confirm_overwrite", False)
 
     analyzer = GPCAnalyzer(
@@ -121,7 +175,7 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
         save_picture=params.get("save_picture", True),
         display_mode=params.get("display_mode", True),
         save_figure_file_gpc=params.get("save_figure_file_gpc", True),
-        progress_callback=_make_progress_callback(),
+        progress_callback=_make_progress_callback(params, "gpc"),
     )
     if selected_files is not None:
         analyzer.selected_file = selected_files
@@ -154,14 +208,19 @@ def _gpc_check_output(params: dict[str, Any]) -> Any:
 # ---------------------------------------------------------------------------
 
 def _mw_analyze(params: dict[str, Any]) -> Any:
-    send_notification("progress", {"progress": 0.01, "message": "Loading MW analyzer"})
+    datadir = params.get("datadir", "")
+    selected_files = _validate_selected_files(
+        datadir,
+        params.get("selected_files"),
+        ".rst",
+        required=True,
+    )
+    assert selected_files is not None
+
+    progress_callback = _make_progress_callback(params, "mw")
+    progress_callback(0.01, "Loading MW analyzer")
 
     from analyzer.mw import MolecularWeightAnalyzer
-
-    selected_files: list[str] | None = params.get("selected_files")
-    if not selected_files:
-        raise JsonRpcError(INVALID_PARAMS, "selected_files is required and must not be empty")
-    datadir = params.get("datadir", "")
 
     analyzer = MolecularWeightAnalyzer(
         datadir=datadir,
@@ -180,7 +239,7 @@ def _mw_analyze(params: dict[str, Any]) -> Any:
         draw_mw=params.get("draw_mw", True),
         draw_table=params.get("draw_table", True),
         setting_name=params.get("setting_name", DEFAULT_SETTING_NAME),
-        progress_callback=_make_progress_callback(),
+        progress_callback=progress_callback,
     )
     analyzer.selected_file = selected_files
 
@@ -247,9 +306,12 @@ def _dsc_analyze(params: dict[str, Any]) -> Any:
     if not datadir:
         raise JsonRpcError(INVALID_PARAMS, "datadir is required for DSC analysis")
 
-    selected_files: list[str] | None = params.get("selected_files")
-    if selected_files is not None and not selected_files:
-        raise JsonRpcError(INVALID_PARAMS, "selected_files must not be empty")
+    selected_files = _validate_selected_files(
+        datadir,
+        params.get("selected_files"),
+        ".txt",
+        required=False,
+    )
 
     analyzer = DSCAnalyzer(
         datadir=datadir,
@@ -269,7 +331,7 @@ def _dsc_analyze(params: dict[str, Any]) -> Any:
         title_font_size=params.get("title_font_size"),
         axis_font_size=params.get("axis_font_size"),
         transparent_back=params.get("transparent_back"),
-        progress_callback=_make_progress_callback(),
+        progress_callback=_make_progress_callback(params, "dsc"),
     )
     if selected_files is not None:
         analyzer.selected_file = selected_files
@@ -299,26 +361,37 @@ def _ir_list_files(params: dict[str, Any]) -> Any:
 
 
 def _ir_analyze(params: dict[str, Any]) -> Any:
-    from analyzer.ir import IRAnalyzer
+    from analyzer.ir import (
+        DEFAULT_NORMALIZATION_PEAK,
+        IR_DEFAULT_CURVE_COLOR,
+        IRAnalyzer,
+    )
 
     datadir = params.get("datadir", "")
     if not datadir:
         raise JsonRpcError(INVALID_PARAMS, "datadir is required for IR analysis")
 
-    selected_files: list[str] | None = params.get("selected_files")
-    if not selected_files:
-        raise JsonRpcError(INVALID_PARAMS, "selected_files is required and must not be empty")
+    selected_files = _validate_selected_files(
+        datadir,
+        params.get("selected_files"),
+        ".dpt",
+        required=True,
+    )
+    assert selected_files is not None
 
     analyzer = IRAnalyzer(
         datadir=datadir,
         selected_files=selected_files,
-        curve_color=params.get("curve_color", DEFAULT_BAR_COLOR),
+        curve_color=params.get("curve_color", IR_DEFAULT_CURVE_COLOR),
         line_width=params.get("line_width", 1.0),
         axis_width=params.get("axis_width", 1.0),
         title_font_size=params.get("title_font_size", 20),
         axis_font_size=params.get("axis_font_size", 14),
         transparent_back=params.get("transparent_back", DEFAULT_TRANSPARENT_BACK),
-        progress_callback=_make_progress_callback(),
+        draw_overlay=params.get("draw_overlay", True),
+        normalize_overlay=params.get("normalize_overlay", True),
+        normalization_peak=params.get("normalization_peak", DEFAULT_NORMALIZATION_PEAK),
+        progress_callback=_make_progress_callback(params, "ir"),
     )
 
     success = analyzer.run()
@@ -425,22 +498,25 @@ def _system_open_folder(params: dict[str, Any]) -> Any:
 
 
 def _system_clean_output(params: dict[str, Any]) -> Any:
-    datadir = params.get("datadir", "")
-    if datadir:
-        base = os.path.dirname(datadir)
-    else:
-        base = os.path.dirname(_ROOT_DIR)
-    output_dirs = [
+    if params.get("confirm") is not True:
+        raise JsonRpcError(INVALID_PARAMS, "confirm=true is required to clean outputs")
+
+    datadir = params.get("datadir")
+    if not isinstance(datadir, str) or not os.path.isdir(datadir):
+        raise JsonRpcError(INVALID_PARAMS, "datadir must be an existing directory")
+
+    base = os.path.dirname(os.path.realpath(datadir))
+    output_dirs = list(dict.fromkeys([
         os.path.join(base, "Mw_output"),
         os.path.join(base, "GPC_output"),
         os.path.join(base, "DSC_Cycle"),
         os.path.join(base, "DSC_Pic"),
         os.path.join(get_install_dir(), "IR_output"),
-    ]
+    ]))
     cleaned: list[str] = []
     for dir_path in output_dirs:
-        if os.path.isdir(dir_path):
-            shutil.rmtree(dir_path, ignore_errors=True)
+        if os.path.isdir(dir_path) and not os.path.islink(dir_path):
+            shutil.rmtree(dir_path)
             os.makedirs(dir_path, exist_ok=True)
             cleaned.append(dir_path)
     return {"success": True, "cleaned": cleaned}
@@ -512,8 +588,11 @@ def _make_success_response(req_id: int | str | None, result: Any) -> dict[str, A
     return {"jsonrpc": "2.0", "result": result, "id": req_id}
 
 
-def _handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
+def _handle_request(request: Any) -> dict[str, Any] | None:
     """Process a single JSON-RPC request. Returns None for notifications."""
+    if not isinstance(request, dict):
+        return _make_error_response(None, INVALID_REQUEST, "Request must be an object")
+
     if request.get("jsonrpc") != "2.0":
         return _make_error_response(
             request.get("id"), INVALID_REQUEST, "Invalid JSON-RPC version"
@@ -525,7 +604,7 @@ def _handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
             request.get("id"), INVALID_REQUEST, "Missing or invalid 'method'"
         )
 
-    params: dict[str, Any] = request.get("params", {})
+    params = request.get("params", {})
     if not isinstance(params, dict):
         return _make_error_response(
             request.get("id"), INVALID_PARAMS, "Params must be an object"
@@ -533,6 +612,8 @@ def _handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
 
     req_id = request.get("id")
     is_notification = "id" not in request
+    handler_params = dict(params)
+    handler_params["__request_id"] = req_id
 
     handler = METHOD_TABLE.get(method)
     if handler is None:
@@ -541,11 +622,15 @@ def _handle_request(request: dict[str, Any]) -> dict[str, Any] | None:
         return _make_error_response(req_id, METHOD_NOT_FOUND, f"Method not found: {method}")
 
     try:
-        result = handler(params)
+        result = handler(handler_params)
     except JsonRpcError as exc:
         if is_notification:
             return None
         return _make_error_response(req_id, exc.code, exc.message, exc.data)
+    except (TypeError, ValueError) as exc:
+        if is_notification:
+            return None
+        return _make_error_response(req_id, INVALID_PARAMS, str(exc))
     except Exception as exc:
         logger.exception("Unhandled error in method %s", method)
         if is_notification:
@@ -574,13 +659,18 @@ def handle_line(line: str) -> None:
 
     # Batch requests
     if isinstance(request, list):
+        if not request:
+            _write_response(
+                _make_error_response(None, INVALID_REQUEST, "Batch request must not be empty")
+            )
+            return
         responses: list[dict[str, Any]] = []
         for item in request:
             resp = _handle_request(item)
             if resp is not None:
                 responses.append(resp)
         if responses:
-            _write_response(responses)  # type: ignore[arg-type]
+            _write_response(responses)
         return
 
     resp = _handle_request(request)

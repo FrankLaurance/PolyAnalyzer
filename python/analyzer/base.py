@@ -10,7 +10,9 @@ import glob
 import json
 import logging
 import platform
+import shutil
 import subprocess
+import uuid
 import numpy as np
 from pathlib import Path
 from datetime import datetime
@@ -21,21 +23,104 @@ from numpy.typing import NDArray
 import sys
 
 
+def _find_development_root(start_dir: Path) -> Optional[Path]:
+    for candidate in (start_dir, *start_dir.parents):
+        if (candidate / "src-tauri").is_dir() and (candidate / "python").is_dir():
+            return candidate
+    return None
+
+
+def _get_user_data_dir() -> Path:
+    override = os.environ.get("POLYANALYZER_DATA_DIR")
+    if override:
+        return Path(override).expanduser().resolve()
+
+    system = platform.system()
+    if system == "Windows":
+        base_dir = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    elif system == "Darwin":
+        base_dir = Path.home() / "Library" / "Application Support"
+    else:
+        base_dir = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+    return (base_dir / "PolyAnalyzer").resolve()
+
+
 def get_install_dir() -> str:
-    """Get the installation directory (exe dir for packaged, project root for dev)."""
+    """Return the writable data root for packaged or development execution."""
     if getattr(sys, "frozen", False):
         exe_dir = Path(sys.executable).resolve().parent
-        for parent in (exe_dir, *exe_dir.parents):
-            if (
-                (parent / "src-tauri").is_dir()
-                and (parent / "datapath").is_dir()
-                and (parent / "setting").is_dir()
-            ):
-                return str(parent)
-        return str(exe_dir)
+        development_root = _find_development_root(exe_dir)
+        if development_root is not None:
+            return str(development_root)
+
+        user_data_dir = _get_user_data_dir()
+        user_data_dir.mkdir(parents=True, exist_ok=True)
+        return str(user_data_dir)
+
+    # base.py -> analyzer/ -> python/ -> project_root/
+    return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def validate_basename(name: str, label: str = "filename") -> str:
+    """Validate a user-provided path component without allowing traversal."""
+    if not isinstance(name, str) or not name or name in {".", ".."}:
+        raise ValueError(f"{label} must be a non-empty basename")
+    if "\x00" in name or "/" in name or "\\" in name or os.path.basename(name) != name:
+        raise ValueError(f"{label} must be a basename without path separators")
+    return name
+
+
+def resolve_contained_file(directory: str, name: str, label: str = "filename") -> str:
+    """Resolve a regular file while preventing traversal and symlink escapes."""
+    validate_basename(name, label)
+    root = os.path.realpath(directory)
+    candidate = os.path.realpath(os.path.join(root, name))
+    if os.path.commonpath([root, candidate]) != root:
+        raise ValueError(f"{label} must stay inside the data directory")
+    if not os.path.isfile(candidate):
+        raise FileNotFoundError(candidate)
+    return candidate
+
+
+def _remove_path(path: str) -> None:
+    if os.path.islink(path) or os.path.isfile(path):
+        os.remove(path)
+    elif os.path.isdir(path):
+        shutil.rmtree(path)
+
+
+def replace_directories_atomically(replacements: List[Tuple[str, str]]) -> None:
+    """Commit staged directories and restore all previous outputs on failure."""
+    backups: List[Tuple[str, str]] = []
+    installed: List[str] = []
+    try:
+        for staging_dir, final_dir in replacements:
+            if not os.path.isdir(staging_dir):
+                raise ValueError(f"Staging directory does not exist: {staging_dir}")
+            os.makedirs(os.path.dirname(final_dir), exist_ok=True)
+            if os.path.lexists(final_dir):
+                backup = os.path.join(
+                    os.path.dirname(final_dir),
+                    f".{os.path.basename(final_dir)}-backup-{uuid.uuid4().hex}",
+                )
+                os.replace(final_dir, backup)
+                backups.append((backup, final_dir))
+
+        for staging_dir, final_dir in replacements:
+            os.replace(staging_dir, final_dir)
+            installed.append(final_dir)
+    except Exception:
+        for final_dir in reversed(installed):
+            if os.path.lexists(final_dir):
+                _remove_path(final_dir)
+        for backup, final_dir in reversed(backups):
+            if os.path.lexists(backup):
+                os.replace(backup, final_dir)
+        raise
     else:
-        # base.py -> analyzer/ -> python/ -> project_root/
-        return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        for backup, _final_dir in backups:
+            if os.path.lexists(backup):
+                _remove_path(backup)
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +131,7 @@ os.environ["MPLBACKEND"] = "Agg"
 # ---------------------------------------------------------------------------
 # Constants — default settings
 # ---------------------------------------------------------------------------
-APP_VERSION: str = "2.0.0"
+APP_VERSION: str = "2.2.1"
 DEFAULT_BAR_COLOR: str = "#002FA7"
 DEFAULT_MW_COLOR: str = "#FF6A07"
 DEFAULT_SETTING_NAME: str = "defaultSetting.ini"
@@ -112,8 +197,8 @@ class Logger:
         self._success_cb = success_callback
 
         # 避免重复添加处理器
-        if not self.logger.handlers:
-            log_dir = os.path.join(os.getcwd(), "logs")
+        if not self.logger.handlers and os.environ.get("POLYANALYZER_DISABLE_FILE_LOG") != "1":
+            log_dir = os.path.join(get_install_dir(), "logs")
             os.makedirs(log_dir, exist_ok=True)
 
             log_file = os.path.join(
@@ -255,7 +340,12 @@ class SettingsManager:
 
     def get_setting_path(self, name: Optional[str] = None) -> str:
         filename = name if name else self.setting_name
-        return os.path.join(self.setting_dir, filename)
+        validate_basename(filename, "setting name")
+        setting_dir = os.path.realpath(self.setting_dir)
+        setting_path = os.path.realpath(os.path.join(setting_dir, filename))
+        if os.path.commonpath([setting_dir, setting_path]) != setting_dir:
+            raise ValueError("setting name must stay inside the settings directory")
+        return setting_path
 
     def list_settings(self) -> List[str]:
         return [
@@ -329,6 +419,7 @@ class SettingsManager:
                 json.dump(setting, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.error(f"保存设置失败: {e}")
+            raise
 
     def delete_setting(self, setting_name: str) -> None:
         setting_path = self.get_setting_path(setting_name)
@@ -338,6 +429,7 @@ class SettingsManager:
                 self.create_default_setting()
         except Exception as e:
             logger.error(f"删除设置失败: {e}")
+            raise
 
 
 # ===================================================================
@@ -430,9 +522,9 @@ class BaseAnalyzer:
         """读取数据文件（ASCII 编码，过滤空行）"""
         self.reset(reset_peak_data=reset_peak_data)
         self.filename = name
-        file_path = os.path.join(self.data_path, name)
 
         try:
+            file_path = resolve_contained_file(self.data_path, name)
             with open(file_path, "r", encoding="ascii") as file:
                 self.lines = [line.strip() for line in file if line.strip()]
             return True
@@ -454,6 +546,7 @@ class BaseAnalyzer:
             self._cached_file_list = [
                 os.path.basename(i)
                 for i in glob.glob(os.path.join(self.data_path, "*.rst"))
+                if os.path.isfile(i)
             ]
         return self._cached_file_list
 

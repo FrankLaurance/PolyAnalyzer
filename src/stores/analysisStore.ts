@@ -67,6 +67,9 @@ export const useAnalysisStore = create<AnalysisState>()((set) => ({
           result,
           running: false,
           progress: result?.success ? 100 : s.analyzers[type].progress,
+          message: result?.success
+            ? s.analyzers[type].message
+            : result?.message ?? s.analyzers[type].message,
         },
       },
     }));

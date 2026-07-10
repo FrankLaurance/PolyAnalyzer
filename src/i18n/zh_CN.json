@@ -75,6 +75,9 @@
   "ir_output_folder": "IR 输出文件夹",
   "ir_generated_files": "生成 {{count}} 个文件",
   "ir_processed_count": "处理 {{count}} 个样品",
+  "ir_draw_overlay": "绘制多样品叠加图",
+  "ir_normalize_overlay": "叠加图按峰归一化",
+  "ir_normalization_peak": "归一化峰位",
 
   "clean_folder": "清理文件夹",
   "run_clean": "执行清理",

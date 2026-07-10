@@ -39,20 +39,30 @@ def get_target_triple() -> str:
         raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
 
-HIDDEN_IMPORTS = [
+COMMON_HIDDEN_IMPORTS = [
     "numpy",
     "pandas",
     "matplotlib",
     "matplotlib.backends.backend_agg",
-    "scipy",
     "openpyxl",
     "chardet",
     "plottable",
+    "analyzer.plotting",
+]
+
+SIDECAR_HIDDEN_IMPORTS = [
+    *COMMON_HIDDEN_IMPORTS,
     "analyzer.gpc",
     "analyzer.mw",
     "analyzer.dsc",
     "analyzer.ir",
-    "analyzer.plotting",
+]
+
+CLI_HIDDEN_IMPORTS = [
+    *COMMON_HIDDEN_IMPORTS,
+    "analyzer.gpc",
+    "analyzer.mw",
+    "analyzer.dsc",
 ]
 
 EXCLUDED_MODULES = [
@@ -74,6 +84,7 @@ def build_executable(
     target_triple: str,
     binary_name: str,
     entrypoint: str,
+    hidden_imports: list[str],
 ) -> str:
     """Build one PyInstaller executable and rename it for Tauri externalBin."""
     ext = ".exe" if platform.system() == "Windows" else ""
@@ -94,7 +105,7 @@ def build_executable(
         "--specpath", os.path.join(python_dir, "build"),
         "--paths", python_dir,
     ]
-    for module in HIDDEN_IMPORTS:
+    for module in hidden_imports:
         cmd.extend(["--hidden-import", module])
     for module in EXCLUDED_MODULES:
         cmd.extend(["--exclude-module", module])
@@ -125,6 +136,7 @@ def main() -> None:
         target_triple=target_triple,
         binary_name="polyanalyzer-engine",
         entrypoint="main.py",
+        hidden_imports=SIDECAR_HIDDEN_IMPORTS,
     )
     build_executable(
         python_dir=python_dir,
@@ -132,6 +144,7 @@ def main() -> None:
         target_triple=target_triple,
         binary_name="poly",
         entrypoint="cli.py",
+        hidden_imports=CLI_HIDDEN_IMPORTS,
     )
 
 

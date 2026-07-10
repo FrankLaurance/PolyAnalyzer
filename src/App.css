@@ -39,6 +39,12 @@ body {
   background: var(--color-bg);
 }
 
+.panel-loading {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+}
+
 .app-content .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
   border-radius: var(--radius) var(--radius) 0 0;
 }

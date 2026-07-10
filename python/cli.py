@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import glob
 import json
 import os
@@ -31,6 +32,7 @@ from analyzer import (
     SettingsManager,
     get_install_dir,
 )
+from analyzer.base import resolve_contained_file, validate_basename
 
 EXIT_OK = 0
 EXIT_ANALYSIS_FAILED = 1
@@ -60,7 +62,11 @@ def _ensure_datadir(path: str) -> str:
 
 
 def _list_files(datadir: str, pattern: str) -> list[str]:
-    return sorted(os.path.basename(path) for path in glob.glob(os.path.join(datadir, pattern)))
+    return sorted(
+        os.path.basename(path)
+        for path in glob.glob(os.path.join(datadir, pattern))
+        if os.path.isfile(path) and not os.path.islink(path)
+    )
 
 
 def _validate_selected_files(datadir: str, files: list[str] | None, pattern: str) -> list[str]:
@@ -68,13 +74,17 @@ def _validate_selected_files(datadir: str, files: list[str] | None, pattern: str
     if not selected:
         raise CliError(f"No input files matching {pattern} were found in {datadir}")
 
-    missing = [name for name in selected if not os.path.isfile(os.path.join(datadir, name))]
-    if missing:
-        raise CliError(
-            "Input file(s) not found in data directory: " + ", ".join(missing),
-            EXIT_ARGUMENT_ERROR,
-        )
-    return selected
+    validated: list[str] = []
+    for name in selected:
+        try:
+            validate_basename(name, "input filename")
+            if not fnmatch.fnmatch(name.lower(), pattern.lower()):
+                raise ValueError(f"input filename must match {pattern}")
+            resolve_contained_file(datadir, name, "input filename")
+        except (OSError, TypeError, ValueError) as exc:
+            raise CliError(str(exc), EXIT_ARGUMENT_ERROR) from exc
+        validated.append(name)
+    return validated
 
 
 def _parse_segments(value: str) -> list[int]:
@@ -614,6 +624,12 @@ def main(argv: list[str] | None = None) -> int:
         return exc.exit_code
     except KeyboardInterrupt:
         print("Interrupted", file=sys.stderr)
+        return EXIT_ANALYSIS_FAILED
+    except Exception:
+        if getattr(args, "json", False):
+            print(json.dumps({"success": False, "error": "Internal error"}, ensure_ascii=False))
+        else:
+            print("Error: Internal error", file=sys.stderr)
         return EXIT_ANALYSIS_FAILED
 
 

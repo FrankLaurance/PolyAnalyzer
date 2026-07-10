@@ -1,138 +1,90 @@
-# 开发工具安装与卸载指南
+# PolyAnalyzer 开发环境
 
-本项目使用 Tauri v2 + React + Python 架构，以下是所有开发依赖的安装/卸载方式及磁盘占用。
+PolyAnalyzer 使用 Tauri v2 + React + TypeScript + Python sidecar。
 
----
+## 1. Node.js 与 pnpm
 
-## 1. Rust 工具链 (~1.2 GB)
-
-通过 `rustup` 管理，包含 `cargo`、`rustc`、`rustfmt` 等。
+建议使用 Node.js 20 或更高版本、pnpm 9 或更高版本。
 
 ```bash
-# 安装
+corepack enable
+corepack prepare pnpm@9 --activate
+pnpm install
+```
+
+前端命令：
+
+```bash
+pnpm dev
+pnpm build
+```
+
+`pnpm dev` 只启动 Vite。日常联调应使用 `pnpm tauri dev`。
+
+## 2. Rust 与 Tauri
+
+安装 stable Rust：
+
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
-
-# 卸载（会删除 ~/.rustup 和 ~/.cargo）
-rustup self uninstall
 ```
 
-**磁盘位置：**
-- `~/.rustup/` — Rust 工具链 (~1.2 GB)
-- `~/.cargo/` — Cargo 包管理器、缓存 (~183 MB)
+另需安装当前平台的 [Tauri v2 系统依赖](https://v2.tauri.app/start/prerequisites/)。
 
----
-
-## 2. pnpm 包管理器 (~258 MB store)
+Rust 验证命令：
 
 ```bash
-# 安装
-npm install -g pnpm
-
-# 卸载
-npm uninstall -g pnpm
-rm -rf ~/Library/pnpm          # macOS
-rm -rf ~/.local/share/pnpm     # Linux
+cargo check --manifest-path src-tauri/Cargo.toml
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-**磁盘位置：**
-- 全局二进制：`$(npm root -g)/pnpm`
-- 包存储：`~/Library/pnpm/store/` (macOS) 或 `~/.local/share/pnpm/store/` (Linux) (~258 MB)
+## 3. Python sidecar
 
----
-
-## 3. Node.js 依赖 (~285 MB)
-
-项目本地的前端依赖。
+从项目根目录创建环境并安装依赖：
 
 ```bash
-# 安装
-pnpm install
+python3 -m venv .venv
+source .venv/bin/activate
+# Windows PowerShell: .venv\Scripts\Activate.ps1
 
-# 卸载（删除项目内 node_modules）
-rm -rf node_modules
+python -m pip install -r python/requirements.txt
+python -m pip install pyinstaller
 ```
 
-**磁盘位置：**
-- `<项目>/node_modules/` (~285 MB)
-
----
-
-## 4. Rust 编译缓存 (~2.6 GB debug)
-
-Tauri 编译产物，首次构建较大，后续增量编译很快。
+运行测试并构建当前平台的 sidecar：
 
 ```bash
-# 清理编译缓存
-cd src-tauri && cargo clean
-
-# 或直接删除
-rm -rf src-tauri/target
+python -m unittest discover -s python/tests -p "test_*.py"
+python python/build_sidecar.py
 ```
 
-**磁盘位置：**
-- `<项目>/src-tauri/target/` (~2.6 GB debug 模式)
+不要手工改写 `src-tauri/binaries/` 中的产物；应始终由 `python/build_sidecar.py` 生成。
 
----
-
-## 5. Python 依赖
-
-项目后端使用 Python + numpy/scipy/pandas/matplotlib。
+## 4. 桌面联调和打包
 
 ```bash
-# 安装（建议使用虚拟环境）
-cd python
-python3 -m venv venv
-source venv/bin/activate        # Linux/macOS
-# venv\Scripts\activate         # Windows
-pip install numpy scipy pandas matplotlib
-
-# 卸载
-deactivate
-rm -rf python/venv
+pnpm tauri dev
+pnpm tauri build
 ```
 
----
+`pnpm tauri build` 会先运行 `pnpm build`，并为当前平台生成 `bundle.targets = "all"` 支持的安装包。
 
-## 一键清理所有开发缓存
-
-保留工具链，只清理项目缓存：
+## 5. 版本同步
 
 ```bash
-rm -rf node_modules
-cd src-tauri && cargo clean && cd ..
-rm -rf python/venv
+./release.sh X.Y.Z
 ```
 
-## 完全卸载所有工具
+该命令只同步 package、Tauri、Cargo/Cargo.lock 和 Python 的版本字段。提交、tag 和 Release 仍由发布流程单独完成。
 
-```bash
-# 1. 清理项目
-rm -rf node_modules
-rm -rf src-tauri/target
-rm -rf python/venv
+## 6. 缓存位置
 
-# 2. 卸载 Rust
-rustup self uninstall
+| 内容 | 位置 |
+|------|------|
+| pnpm 依赖 | `node_modules/` 和 pnpm store |
+| Rust 构建缓存 | `src-tauri/target/` |
+| Python 虚拟环境 | `.venv/` |
+| PyInstaller 缓存 | Python/PyInstaller 的平台缓存目录 |
 
-# 3. 卸载 pnpm
-npm uninstall -g pnpm
-rm -rf ~/Library/pnpm          # macOS
-rm -rf ~/.local/share/pnpm     # Linux
-
-# 4. 清理 pnpm 全局存储
-pnpm store prune               # 在卸载前运行，清理未引用的包
-```
-
----
-
-## 磁盘占用汇总
-
-| 组件 | 位置 | 大小 |
-|------|------|------|
-| Rust 工具链 | `~/.rustup/` | ~1.2 GB |
-| Cargo 缓存 | `~/.cargo/` | ~183 MB |
-| pnpm 存储 | `~/Library/pnpm/store/` | ~258 MB |
-| node_modules | `<项目>/node_modules/` | ~285 MB |
-| Rust 编译缓存 | `<项目>/src-tauri/target/` | ~2.6 GB (debug) |
-| **合计** | | **~4.5 GB** |
+需要清理时使用各工具自身命令，例如 `cargo clean --manifest-path src-tauri/Cargo.toml` 和 `pnpm store prune`。清理会增加下一次构建时间。

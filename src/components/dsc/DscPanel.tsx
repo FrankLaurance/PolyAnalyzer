@@ -8,6 +8,7 @@ import {
   ColorPicker,
   Space,
   Select,
+  Alert,
   message,
 } from "antd";
 import {
@@ -17,9 +18,9 @@ import {
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
+import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
@@ -27,25 +28,29 @@ import SettingsPanel from "../common/SettingsPanel";
 
 export default function DscPanel() {
   const { t } = useTranslation();
-  const { sendRequest, lastProgress } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge("dsc");
   const analyzer = useAnalysisStore((s) => s.analyzers.dsc);
   const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
-  const {
-    analyzerSettings,
-    updateAnalyzerSettings,
-    savedSettings,
-    loadSettings,
-    saveSettings,
-    deleteSettings,
-  } = useSettingsStore();
+  const analyzerSettings = useSettingsStore((s) => s.analyzerSettings.dsc);
+  const savedSettings = useSettingsStore((s) => s.savedSettings.dsc);
+  const updateAnalyzerSettings = useSettingsStore((s) => s.updateAnalyzerSettings);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const saveSettings = useSettingsStore((s) => s.saveSettings);
+  const deleteSettings = useSettingsStore((s) => s.deleteSettings);
 
   const [folderPath, setFolderPath] = useState("");
-  const [fileList, setFileList] = useState<string[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const {
+    fileList,
+    selectedFiles,
+    setSelectedFiles,
+    filesLoading,
+    fileError,
+    clearFiles,
+    loadFiles,
+  } = useAnalyzerFiles(sendRequest, "dsc.list_files");
   const [saveSegmentData, setSaveSegmentData] = useState(true);
   const [drawSegmentCurve, setDrawSegmentCurve] = useState(true);
   const [drawCycleComparison, setDrawCycleComparison] = useState(true);
-  const [displayComparison, setDisplayComparison] = useState(true);
   const [saveComparison, setSaveComparison] = useState(true);
   const [peaksUpward, setPeaksUpward] = useState(false);
   const [centerPeak, setCenterPeak] = useState(false);
@@ -61,37 +66,28 @@ export default function DscPanel() {
   }, [analyzer.running, lastProgress, setProgress]);
 
   useEffect(() => {
-    sendRequest("system.get_default_datapath", {}).then((res) => {
-      const dp = (res as { datapath: string })?.datapath;
-      if (dp) {
-        setFolderPath(dp);
-        loadFiles(dp);
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    sendRequest("system.get_default_datapath", {})
+      .then((res) => {
+        const dp = (res as { datapath: string })?.datapath;
+        if (dp) {
+          setFolderPath(dp);
+          void loadFiles(dp);
+        }
+      })
+      .catch((error) => message.error(getErrorMessage(error)));
+  }, [loadFiles, sendRequest]);
+
+  const handleFolderPathChange = (path: string) => {
+    setFolderPath(path);
+    clearFiles();
+  };
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
       const path = selected as string;
-      setFolderPath(path);
+      handleFolderPathChange(path);
       await loadFiles(path);
-    }
-  };
-
-  const loadFiles = async (path: string) => {
-    try {
-      const res = (await sendRequest("dsc.list_files", {
-        datadir: path,
-      })) as { files: string[] };
-      const files = res?.files ?? [];
-      setFileList(files);
-      setSelectedFiles(files);
-    } catch (err) {
-      setFileList([]);
-      setSelectedFiles([]);
-      message.error(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -108,14 +104,15 @@ export default function DscPanel() {
     reset("dsc");
     setRunning("dsc", true);
     try {
+      const drawCycle = saveSegmentData && drawCycleComparison;
       const result = await sendRequest("dsc.analyze", {
         datadir: folderPath,
         selected_files: selectedFiles,
         save_seg_mode: saveSegmentData,
         draw_seg_mode: drawSegmentCurve,
-        draw_cycle: drawCycleComparison,
-        display_pic: displayComparison,
-        save_cycle_pic: saveComparison,
+        draw_cycle: drawCycle,
+        display_pic: false,
+        save_cycle_pic: drawCycle && saveComparison,
         peaks_upward: peaksUpward,
         center_peak: centerPeak,
         left_length: leftBoundary,
@@ -131,19 +128,20 @@ export default function DscPanel() {
       const res = result as { cycle_dir?: string; pic_dir?: string };
       if (res?.pic_dir) setOutputDir(res.pic_dir);
       else if (res?.cycle_dir) setOutputDir(res.cycle_dir);
-      setProgress("dsc", 100, t("complete", { time: elapsed + "s" }));
+      setProgress("dsc", 100, t("complete", { time: elapsed }));
       setResult("dsc", {
         success: true,
         message: "DSC analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: elapsed + "s" }));
+      message.success(t("complete", { time: elapsed }));
     } catch (err) {
+      const errorMessage = getErrorMessage(err);
       setResult("dsc", {
         success: false,
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage,
       });
-      message.error(String(err));
+      message.error(errorMessage);
     }
   };
 
@@ -152,8 +150,8 @@ export default function DscPanel() {
     if (!target) return;
     try {
       await invoke("open_folder", { path: target });
-    } catch {
-      try { await openPath(target); } catch { /* ignore */ }
+    } catch (error) {
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -166,11 +164,16 @@ export default function DscPanel() {
           <Input
             className="folder-input"
             value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            onBlur={() => folderPath && loadFiles(folderPath)}
+            onChange={(e) => handleFolderPathChange(e.target.value)}
+            onBlur={() => folderPath && void loadFiles(folderPath)}
             placeholder={t("data_folder")}
+            disabled={analyzer.running}
           />
-          <Button icon={<FolderOpenOutlined />} onClick={handleBrowse}>
+          <Button
+            icon={<FolderOpenOutlined />}
+            onClick={handleBrowse}
+            disabled={analyzer.running}
+          >
             {t("open_folder")}
           </Button>
         </div>
@@ -184,9 +187,12 @@ export default function DscPanel() {
           className="file-list-select"
           value={selectedFiles}
           onChange={setSelectedFiles}
+          disabled={analyzer.running}
+          loading={filesLoading}
           options={fileList.map((file) => ({ label: file, value: file }))}
           placeholder={t("file_list")}
         />
+        {fileError && <Alert type="error" showIcon message={fileError} />}
       </div>
 
       {/* Options — with dependency logic matching original */}
@@ -210,13 +216,6 @@ export default function DscPanel() {
             onChange={(e) => setDrawCycleComparison(e.target.checked)}
           >
             {t("draw_cycle")}
-          </Checkbox>
-          <Checkbox
-            checked={displayComparison}
-            disabled={!saveSegmentData || !drawCycleComparison}
-            onChange={(e) => setDisplayComparison(e.target.checked)}
-          >
-            {t("display_cycle")}
           </Checkbox>
           <Checkbox
             checked={saveComparison}
@@ -279,7 +278,7 @@ export default function DscPanel() {
                   <Checkbox
                     checked={analyzerSettings.transparentBackground}
                     onChange={(e) =>
-                      updateAnalyzerSettings({
+                      updateAnalyzerSettings("dsc", {
                         transparentBackground: e.target.checked,
                       })
                     }
@@ -293,7 +292,7 @@ export default function DscPanel() {
                   <ColorPicker
                     value={analyzerSettings.curveColor}
                     onChange={(c) =>
-                      updateAnalyzerSettings({ curveColor: c.toHexString() })
+                      updateAnalyzerSettings("dsc", { curveColor: c.toHexString() })
                     }
                   />
                 </div>
@@ -305,7 +304,7 @@ export default function DscPanel() {
                     max={3.0}
                     step={0.1}
                     value={analyzerSettings.lineWidth}
-                    onChange={(v) => updateAnalyzerSettings({ lineWidth: v })}
+                    onChange={(v) => updateAnalyzerSettings("dsc", { lineWidth: v })}
                   />
                 </div>
                 <div className="slider-row">
@@ -315,7 +314,7 @@ export default function DscPanel() {
                     max={3.0}
                     step={0.1}
                     value={analyzerSettings.axisWidth}
-                    onChange={(v) => updateAnalyzerSettings({ axisWidth: v })}
+                    onChange={(v) => updateAnalyzerSettings("dsc", { axisWidth: v })}
                   />
                 </div>
                 <div className="slider-row">
@@ -326,7 +325,7 @@ export default function DscPanel() {
                     step={1}
                     value={analyzerSettings.titleFontSize}
                     onChange={(v) =>
-                      updateAnalyzerSettings({ titleFontSize: v })
+                      updateAnalyzerSettings("dsc", { titleFontSize: v })
                     }
                   />
                 </div>
@@ -338,7 +337,7 @@ export default function DscPanel() {
                     step={1}
                     value={analyzerSettings.axisFontSize}
                     onChange={(v) =>
-                      updateAnalyzerSettings({ axisFontSize: v })
+                      updateAnalyzerSettings("dsc", { axisFontSize: v })
                     }
                   />
                 </div>
@@ -367,6 +366,7 @@ export default function DscPanel() {
           progress={analyzer.progress}
           message={analyzer.message}
           running={analyzer.running}
+          failed={analyzer.result?.success === false}
         />
       </div>
 
@@ -383,14 +383,14 @@ export default function DscPanel() {
                 currentSetting={currentSetting}
                 onSwitch={(name) => {
                   setCurrentSetting(name);
-                  loadSettings(name);
+                  loadSettings("dsc", name);
                 }}
                 onSave={(name) => {
-                  saveSettings(name);
+                  saveSettings("dsc", name);
                   setCurrentSetting(name);
                 }}
                 onDelete={(name) => {
-                  deleteSettings(name);
+                  deleteSettings("dsc", name);
                   setCurrentSetting("");
                 }}
               />

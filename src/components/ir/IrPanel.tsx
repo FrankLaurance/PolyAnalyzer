@@ -10,6 +10,7 @@ import {
   Slider,
   Space,
   Typography,
+  Alert,
   message,
 } from "antd";
 import {
@@ -19,12 +20,13 @@ import {
 } from "@ant-design/icons";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
+import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
+import SettingsPanel from "../common/SettingsPanel";
 
 interface IrAnalyzeResult {
   output_dir?: string;
@@ -34,17 +36,30 @@ interface IrAnalyzeResult {
 
 export default function IrPanel() {
   const { t } = useTranslation();
-  const { sendRequest, lastProgress } = usePythonBridge();
+  const { sendRequest, lastProgress } = usePythonBridge("ir");
   const analyzer = useAnalysisStore((s) => s.analyzers.ir);
   const { setRunning, setResult, setProgress, reset } = useAnalysisStore();
-  const { analyzerSettings, updateAnalyzerSettings } = useSettingsStore();
+  const analyzerSettings = useSettingsStore((s) => s.analyzerSettings.ir);
+  const savedSettings = useSettingsStore((s) => s.savedSettings.ir);
+  const updateAnalyzerSettings = useSettingsStore((s) => s.updateAnalyzerSettings);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const saveSettings = useSettingsStore((s) => s.saveSettings);
+  const deleteSettings = useSettingsStore((s) => s.deleteSettings);
 
   const [folderPath, setFolderPath] = useState("");
-  const [fileList, setFileList] = useState<string[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const {
+    fileList,
+    selectedFiles,
+    setSelectedFiles,
+    filesLoading,
+    fileError,
+    clearFiles,
+    loadFiles,
+  } = useAnalyzerFiles(sendRequest, "ir.list_files");
   const [outputDir, setOutputDir] = useState("");
   const [generatedFiles, setGeneratedFiles] = useState<string[]>([]);
   const [processedCount, setProcessedCount] = useState(0);
+  const [currentSetting, setCurrentSetting] = useState<string>("default");
 
   useEffect(() => {
     if (analyzer.running) {
@@ -53,36 +68,27 @@ export default function IrPanel() {
   }, [analyzer.running, lastProgress, setProgress]);
 
   useEffect(() => {
-    sendRequest("system.get_default_ir_datapath", {}).then((res) => {
-      const dp = (res as { datapath: string })?.datapath;
-      if (dp) {
-        setFolderPath(dp);
-        loadFiles(dp);
-      }
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    sendRequest("system.get_default_ir_datapath", {})
+      .then((res) => {
+        const dp = (res as { datapath: string })?.datapath;
+        if (dp) {
+          setFolderPath(dp);
+          void loadFiles(dp);
+        }
+      })
+      .catch((error) => message.error(getErrorMessage(error)));
+  }, [loadFiles, sendRequest]);
 
-  const loadFiles = async (path: string) => {
-    try {
-      const res = (await sendRequest("ir.list_files", {
-        datadir: path,
-      })) as { files: string[] };
-      const files = res?.files ?? [];
-      setFileList(files);
-      setSelectedFiles(files);
-    } catch (err) {
-      setFileList([]);
-      setSelectedFiles([]);
-      message.error(err instanceof Error ? err.message : String(err));
-    }
+  const handleFolderPathChange = (path: string) => {
+    setFolderPath(path);
+    clearFiles();
   };
 
   const handleBrowse = async () => {
     const selected = await open({ directory: true, multiple: false });
     if (selected) {
       const path = selected as string;
-      setFolderPath(path);
+      handleFolderPathChange(path);
       await loadFiles(path);
     }
   };
@@ -113,25 +119,29 @@ export default function IrPanel() {
         title_font_size: analyzerSettings.titleFontSize,
         axis_font_size: analyzerSettings.axisFontSize,
         transparent_back: analyzerSettings.transparentBackground,
+        draw_overlay: analyzerSettings.drawOverlay,
+        normalize_overlay: analyzerSettings.normalizeOverlay,
+        normalization_peak: analyzerSettings.normalizationPeak,
       });
       const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       const res = result as IrAnalyzeResult;
       setOutputDir(res.output_dir ?? "");
       setGeneratedFiles(res.generated_files ?? []);
       setProcessedCount(res.processed_count ?? 0);
-      setProgress("ir", 100, t("complete", { time: elapsed + "s" }));
+      setProgress("ir", 100, t("complete", { time: elapsed }));
       setResult("ir", {
         success: true,
         message: "IR analysis complete",
         data: result,
       });
-      message.success(t("complete", { time: elapsed + "s" }));
+      message.success(t("complete", { time: elapsed }));
     } catch (err) {
+      const errorMessage = getErrorMessage(err);
       setResult("ir", {
         success: false,
-        message: err instanceof Error ? err.message : String(err),
+        message: errorMessage,
       });
-      message.error(String(err));
+      message.error(errorMessage);
     }
   };
 
@@ -140,8 +150,8 @@ export default function IrPanel() {
     if (!target) return;
     try {
       await invoke("open_folder", { path: target });
-    } catch {
-      try { await openPath(target); } catch { /* ignore */ }
+    } catch (error) {
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -153,11 +163,16 @@ export default function IrPanel() {
           <Input
             className="folder-input"
             value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            onBlur={() => folderPath && loadFiles(folderPath)}
+            onChange={(e) => handleFolderPathChange(e.target.value)}
+            onBlur={() => folderPath && void loadFiles(folderPath)}
             placeholder={t("data_folder")}
+            disabled={analyzer.running}
           />
-          <Button icon={<FolderOpenOutlined />} onClick={handleBrowse}>
+          <Button
+            icon={<FolderOpenOutlined />}
+            onClick={handleBrowse}
+            disabled={analyzer.running}
+          >
             {t("open_folder")}
           </Button>
         </div>
@@ -170,10 +185,13 @@ export default function IrPanel() {
           className="file-list-select"
           value={selectedFiles}
           onChange={setSelectedFiles}
+          disabled={analyzer.running}
+          loading={filesLoading}
           options={fileList.map((file) => ({ label: file, value: file }))}
           placeholder={t("file_list")}
         />
-        {fileList.length === 0 && (
+        {fileError && <Alert type="error" showIcon message={fileError} />}
+        {!filesLoading && !fileError && fileList.length === 0 && (
           <Typography.Text type="secondary">{t("ir_no_dpt_files")}</Typography.Text>
         )}
       </div>
@@ -190,21 +208,63 @@ export default function IrPanel() {
                   <Checkbox
                     checked={analyzerSettings.transparentBackground}
                     onChange={(e) =>
-                      updateAnalyzerSettings({
+                      updateAnalyzerSettings("ir", {
                         transparentBackground: e.target.checked,
                       })
                     }
                   >
                     {t("transparent_background")}
                   </Checkbox>
+                  <Checkbox
+                    checked={analyzerSettings.drawOverlay}
+                    onChange={(e) =>
+                      updateAnalyzerSettings("ir", {
+                        drawOverlay: e.target.checked,
+                      })
+                    }
+                  >
+                    {t("ir_draw_overlay")}
+                  </Checkbox>
+                  {analyzerSettings.drawOverlay && (
+                    <Checkbox
+                      checked={analyzerSettings.normalizeOverlay}
+                      onChange={(e) =>
+                        updateAnalyzerSettings("ir", {
+                          normalizeOverlay: e.target.checked,
+                        })
+                      }
+                    >
+                      {t("ir_normalize_overlay")}
+                    </Checkbox>
+                  )}
                 </div>
+
+                {analyzerSettings.drawOverlay && analyzerSettings.normalizeOverlay && (
+                  <div className="panel-row">
+                    <label style={{ minWidth: 180, textAlign: "right" }}>
+                      {t("ir_normalization_peak")}:
+                    </label>
+                    <InputNumber
+                      min={400}
+                      max={4000}
+                      step={1}
+                      value={analyzerSettings.normalizationPeak}
+                      onChange={(value) =>
+                        updateAnalyzerSettings("ir", {
+                          normalizationPeak: value ?? analyzerSettings.normalizationPeak,
+                        })
+                      }
+                    />
+                    <Typography.Text type="secondary">cm^-1</Typography.Text>
+                  </div>
+                )}
 
                 <div className="color-row">
                   <label>{t("curve_color")}:</label>
                   <ColorPicker
                     value={analyzerSettings.curveColor}
                     onChange={(color) =>
-                      updateAnalyzerSettings({ curveColor: color.toHexString() })
+                      updateAnalyzerSettings("ir", { curveColor: color.toHexString() })
                     }
                   />
                 </div>
@@ -216,7 +276,7 @@ export default function IrPanel() {
                     max={3}
                     step={0.1}
                     value={analyzerSettings.lineWidth}
-                    onChange={(value) => updateAnalyzerSettings({ lineWidth: value })}
+                    onChange={(value) => updateAnalyzerSettings("ir", { lineWidth: value })}
                   />
                   <span style={{ minWidth: 36 }}>{analyzerSettings.lineWidth}</span>
                 </div>
@@ -228,7 +288,7 @@ export default function IrPanel() {
                     max={3}
                     step={0.1}
                     value={analyzerSettings.axisWidth}
-                    onChange={(value) => updateAnalyzerSettings({ axisWidth: value })}
+                    onChange={(value) => updateAnalyzerSettings("ir", { axisWidth: value })}
                   />
                   <span style={{ minWidth: 36 }}>{analyzerSettings.axisWidth}</span>
                 </div>
@@ -240,7 +300,7 @@ export default function IrPanel() {
                     max={48}
                     value={analyzerSettings.titleFontSize}
                     onChange={(value) =>
-                      updateAnalyzerSettings({ titleFontSize: value ?? analyzerSettings.titleFontSize })
+                      updateAnalyzerSettings("ir", { titleFontSize: value ?? analyzerSettings.titleFontSize })
                     }
                   />
                   <label style={{ minWidth: 140, textAlign: "right" }}>{t("axis_font_size")}:</label>
@@ -249,7 +309,7 @@ export default function IrPanel() {
                     max={36}
                     value={analyzerSettings.axisFontSize}
                     onChange={(value) =>
-                      updateAnalyzerSettings({ axisFontSize: value ?? analyzerSettings.axisFontSize })
+                      updateAnalyzerSettings("ir", { axisFontSize: value ?? analyzerSettings.axisFontSize })
                     }
                   />
                 </div>
@@ -277,6 +337,7 @@ export default function IrPanel() {
           progress={analyzer.progress}
           message={analyzer.message}
           running={analyzer.running}
+          failed={analyzer.result?.success === false}
         />
       </div>
 
@@ -289,6 +350,34 @@ export default function IrPanel() {
           </Typography.Text>
         </div>
       )}
+
+      <Collapse
+        className="settings-collapse"
+        items={[
+          {
+            key: "settings",
+            label: t("settings"),
+            children: (
+              <SettingsPanel
+                settingsList={Object.keys(savedSettings)}
+                currentSetting={currentSetting}
+                onSwitch={(name) => {
+                  setCurrentSetting(name);
+                  loadSettings("ir", name);
+                }}
+                onSave={(name) => {
+                  saveSettings("ir", name);
+                  setCurrentSetting(name);
+                }}
+                onDelete={(name) => {
+                  deleteSettings("ir", name);
+                  setCurrentSetting("default");
+                }}
+              />
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

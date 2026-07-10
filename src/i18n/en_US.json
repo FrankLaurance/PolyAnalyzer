@@ -75,6 +75,9 @@
   "ir_output_folder": "IR Output Folder",
   "ir_generated_files": "{{count}} files generated",
   "ir_processed_count": "{{count}} samples processed",
+  "ir_draw_overlay": "Draw Multi-Sample Overlay",
+  "ir_normalize_overlay": "Normalize Overlay by Peak",
+  "ir_normalization_peak": "Normalization Peak",
 
   "clean_folder": "Clean Folder",
   "run_clean": "Run Clean",

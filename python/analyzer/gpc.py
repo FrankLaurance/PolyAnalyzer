@@ -7,9 +7,10 @@ All Streamlit dependencies have been removed; UI display is handled by the front
 
 import os
 import glob
+import re
 import numpy as np
 import pandas as pd
-from typing import List, Optional, Callable
+from typing import Collection, List, Optional, Callable
 
 from .base import (
     BaseAnalyzer,
@@ -19,7 +20,30 @@ from .base import (
     GPC_X_COLUMN_INDEX,
     GPC_Y_COLUMN_INDEX,
     MIN_GPC_PEAK_COLUMNS,
+    validate_basename,
 )
+
+
+_INVALID_SHEET_CHARACTERS = re.compile(r"[\x00-\x1f\[\]:*?/\\]")
+
+
+def make_unique_sheet_name(sample_name: str, existing_names: Collection[str]) -> str:
+    """Return an Excel-compatible sheet name unique within existing_names."""
+    cleaned = _INVALID_SHEET_CHARACTERS.sub("_", str(sample_name)).strip().strip("'")
+    base_name = cleaned or "Sheet"
+    existing = {name.casefold() for name in existing_names}
+
+    candidate = base_name[:31]
+    if candidate.casefold() not in existing:
+        return candidate
+
+    index = 2
+    while True:
+        suffix = f" ({index})"
+        candidate = base_name[: 31 - len(suffix)] + suffix
+        if candidate.casefold() not in existing:
+            return candidate
+        index += 1
 
 
 class GPCAnalyzer(BaseAnalyzer):
@@ -42,7 +66,7 @@ class GPCAnalyzer(BaseAnalyzer):
                          info_callback=info_callback)
         self.output_dir: str = os.path.join(os.path.dirname(self.data_path), "GPC_output")
         self.file_list: Optional[List[str]] = None
-        self.output_filename: str = output_filename
+        self.output_filename: str = validate_basename(output_filename, "GPC output name")
         self.selected_file: Optional[List[str]] = None
 
         # 运行模式
@@ -190,12 +214,14 @@ class GPCAnalyzer(BaseAnalyzer):
         """将色谱图数据输出为 Excel 文件"""
         result_name = os.path.join(self.output_dir, self.output_filename + ".xlsx")
         os.makedirs(self.output_dir, exist_ok=True)
-        xlsx = pd.ExcelWriter(result_name, engine="openpyxl")
-        for _num, (name, data) in enumerate(self.peak_data.items()):
-            for peak in data:
-                df = pd.DataFrame(peak[:, 5:7])
-                df.to_excel(xlsx, sheet_name=name, index=False, header=False)
-        xlsx.close()
+        used_names: List[str] = []
+        with pd.ExcelWriter(result_name, engine="openpyxl") as xlsx:
+            for _num, (name, data) in enumerate(self.peak_data.items()):
+                for peak in data:
+                    sheet_name = make_unique_sheet_name(name, used_names)
+                    used_names.append(sheet_name)
+                    df = pd.DataFrame(peak[:, 5:7])
+                    df.to_excel(xlsx, sheet_name=sheet_name, index=False, header=False)
 
     # ------------------------------------------------------------------
     # Main entry point

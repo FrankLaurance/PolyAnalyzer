@@ -5,7 +5,6 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
     {
       "identifier": "shell:allow-spawn",
       "allow": [
@@ -15,26 +14,8 @@
         }
       ]
     },
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        {
-          "name": "binaries/polyanalyzer-engine",
-          "sidecar": true
-        }
-      ]
-    },
     "shell:allow-stdin-write",
     "shell:allow-kill",
-    "dialog:allow-open",
-    "dialog:allow-save",
-    "dialog:allow-message",
-    "dialog:allow-ask",
-    "fs:allow-read-text-file",
-    "fs:allow-write-text-file",
-    "fs:allow-exists",
-    "fs:allow-mkdir",
-    "fs:allow-read-dir",
-    "fs:allow-remove"
+    "dialog:allow-open"
   ]
 }

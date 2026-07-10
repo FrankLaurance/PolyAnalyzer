@@ -33,6 +33,7 @@ from .base import (
     PERCENTAGE_FACTOR,
     BAR_POSITION_WEIGHT_LEFT,
     BAR_POSITION_WEIGHT_RIGHT,
+    resolve_contained_file,
 )
 from .plotting import configure_plotting
 
@@ -188,9 +189,9 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         """读取数据文件"""
         self.reset()
         self.filename = name
-        file_path = os.path.join(self.data_path, name)
 
         try:
+            file_path = resolve_contained_file(self.data_path, name)
             with open(file_path, "r", encoding="ascii") as file:
                 self.lines = [line.strip() for line in file if line.strip()]
             return True
@@ -478,6 +479,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         if self.progress_callback:
             self.progress_callback(0.01, "Preparing MW plot engine")
         self._plt = configure_plotting()
+        processed_count = 0
 
         for pro, filename in enumerate(self.file_list):
             self.filename = filename
@@ -490,6 +492,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
                 if self.read_file(filename):
                     self.preprocess()
                     self.draw_image()
+                    processed_count += 1
                     self.logger.info(f"成功处理文件: {filename}")
             except Exception as e:
                 self.logger.error(f"处理文件 {filename} 时出错", show_ui=True, exception=e)
@@ -503,4 +506,4 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
                         ),
                     )
 
-        return True
+        return processed_count > 0

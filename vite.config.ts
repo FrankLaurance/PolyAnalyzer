@@ -29,4 +29,30 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    // Ant Design is intentionally isolated in one cacheable desktop vendor chunk.
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@tauri-apps")) return "tauri-vendor";
+          if (id.includes("i18next")) return "i18n-vendor";
+          if (id.includes("zustand")) return "state-vendor";
+          if (
+            id.includes("/node_modules/antd/")
+            || id.includes("@ant-design")
+            || id.includes("/node_modules/rc-")
+            || id.includes("@rc-component")
+          ) return "antd-vendor";
+          if (
+            id.includes("/node_modules/react/")
+            || id.includes("/node_modules/react-dom/")
+            || id.includes("/node_modules/scheduler/")
+          ) return "react-vendor";
+          return "vendor";
+        },
+      },
+    },
+  },
 }));

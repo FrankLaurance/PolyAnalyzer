@@ -8,6 +8,8 @@ All Streamlit dependencies have been removed; UI feedback is handled via callbac
 import os
 import re
 import glob
+import shutil
+import tempfile
 import numpy as np
 import chardet
 import matplotlib.pyplot as plt
@@ -25,6 +27,8 @@ from .base import (
     FIGURE_DPI,
     FIGURE_SIZE_WITHOUT_TABLE,
     get_install_dir,
+    replace_directories_atomically,
+    resolve_contained_file,
 )
 
 # Color palette for cycle overlay plots.
@@ -66,7 +70,7 @@ class DSCAnalyzer(BaseAnalyzer):
         info_callback: Optional[Callable[[str], None]] = None,
     ) -> None:
         """初始化DSC分析器"""
-        super().__init__(datadir)
+        super().__init__(datadir, progress_callback=progress_callback)
 
         self.cycle_dir: str = os.path.join(os.path.dirname(self.data_path), "DSC_Cycle")
         self.pic_dir: str = os.path.join(os.path.dirname(self.data_path), "DSC_Pic")
@@ -98,6 +102,7 @@ class DSCAnalyzer(BaseAnalyzer):
         # 回调函数
         self.progress_callback = progress_callback
         self.info_callback = info_callback
+        self._last_progress: float = 0.0
 
         # 颜色库
         self.color_list: List[str] = _COLOR_LIST
@@ -200,9 +205,9 @@ class DSCAnalyzer(BaseAnalyzer):
         """读取数据文件 (自动检测编码)"""
         self.reset()
         self.filename = name
-        file_path = os.path.join(self.data_path, name)
 
         try:
+            file_path = resolve_contained_file(self.data_path, name)
             # 检测编码
             with open(file_path, "rb") as f:
                 raw_data = f.read()
@@ -225,6 +230,26 @@ class DSCAnalyzer(BaseAnalyzer):
         except Exception as e:
             self.logger.error(f"读取文件失败 {name}", show_ui=True, exception=e)
             return False
+
+    def _emit_progress(self, progress: float, message: str) -> None:
+        if not self.progress_callback:
+            return
+        value = max(self._last_progress, min(1.0, max(0.0, progress)))
+        self._last_progress = value
+        self.progress_callback(value, message)
+
+    def _has_valid_processed_data(self) -> bool:
+        if not isinstance(self.data, np.ndarray) or self.data.ndim != 2:
+            return False
+        if self.data.shape[0] < 2 or self.data.shape[1] < 3:
+            return False
+        return any(
+            isinstance(segment, np.ndarray)
+            and segment.ndim == 2
+            and segment.shape[0] >= 2
+            and segment.shape[1] >= 3
+            for segment in self.data_seg
+        )
 
     # -- preprocessing -----------------------------------------------------
 
@@ -428,7 +453,6 @@ class DSCAnalyzer(BaseAnalyzer):
             if data.size == 0:
                 continue
 
-            plt.cla()
             fig = plt.figure(dpi=FIGURE_DPI, figsize=FIGURE_SIZE_WITHOUT_TABLE)
             if self.transparent_back:
                 fig.patch.set_alpha(0.0)
@@ -491,22 +515,33 @@ class DSCAnalyzer(BaseAnalyzer):
             )
             plt.close(fig)
 
-    def cycle_draw(self) -> List[plt.Figure]:
+    def cycle_draw(
+        self,
+        progress_start: float = 0.8,
+        progress_end: float = 0.98,
+    ) -> List[plt.Figure]:
         """绘制循环叠加图
 
         Returns:
             A list of matplotlib *Figure* objects (one per cycle directory)
             so that callers / the frontend can display them as needed.
         """
-        cycle_list = glob.glob(os.path.join(self.cycle_dir, "Cycle*"))
+        cycle_list = sorted(
+            path
+            for path in glob.glob(os.path.join(self.cycle_dir, "Cycle*"))
+            if os.path.isdir(path)
+        )
         figures: List[plt.Figure] = []
 
         for pro, cycle_path in enumerate(cycle_list):
-            plt.cla()
             fig = plt.figure(dpi=300, figsize=(16, 8))
             labels: List[str] = []
 
-            csv_files = glob.glob(os.path.join(cycle_path, "*.csv"))
+            csv_files = [
+                path
+                for path in glob.glob(os.path.join(cycle_path, "*.csv"))
+                if os.path.isfile(path)
+            ]
 
             # 用于计算平均峰位置
             peak_x_list: List[float] = []
@@ -568,19 +603,17 @@ class DSCAnalyzer(BaseAnalyzer):
                 plt.savefig(os.path.join(cycle_path, "result.png"))
 
             # 进度更新
-            if self.progress_callback:
-                self.progress_callback(
-                    (pro + 1) / len(cycle_list),
-                    "画图进度 {}/{} {:.2f}%".format(
-                        pro + 1, len(cycle_list), (pro + 1) * 100 / len(cycle_list)
-                    ),
-                )
+            fraction = (pro + 1) / len(cycle_list)
+            self._emit_progress(
+                progress_start + (progress_end - progress_start) * fraction,
+                "画图进度 {}/{} {:.2f}%".format(
+                    pro + 1, len(cycle_list), fraction * 100
+                ),
+            )
 
             figures.append(fig)
 
-            # Close figure if caller does not need to display it
-            if not self.display_pic:
-                plt.close(fig)
+            plt.close(fig)
 
         return figures
 
@@ -588,56 +621,108 @@ class DSCAnalyzer(BaseAnalyzer):
 
     def run(self) -> bool:
         """运行DSC分析"""
-        self.clear_dir()
+        self._last_progress = 0.0
         if self.info_callback:
             self.info_callback("处理原数据...")
 
         if self.selected_file is not None:
-            file_list = [
-                os.path.join(self.data_path, filename)
-                for filename in self.selected_file
-                if filename.lower().endswith(".txt")
-            ]
+            file_list = [filename for filename in self.selected_file if isinstance(filename, str)]
         else:
-            file_list = glob.glob(os.path.join(self.data_path, "*.txt"))
+            file_list = [
+                os.path.basename(path)
+                for path in glob.glob(os.path.join(self.data_path, "*.txt"))
+                if os.path.isfile(path)
+            ]
 
         if not file_list:
             self.logger.warning("数据文件夹中没有相应文件", show_ui=True)
             return False
 
-        for pro, file_path in enumerate(file_list):
-            filename = os.path.basename(file_path)
-            if self.read_file(filename):
-                if self.info_callback:
-                    self.info_callback(f"预处理文件: {filename}...")
-                self.preprocess()
+        final_cycle_dir = self.cycle_dir
+        final_pic_dir = self.pic_dir
+        os.makedirs(os.path.dirname(final_cycle_dir), exist_ok=True)
+        os.makedirs(os.path.dirname(final_pic_dir), exist_ok=True)
+        staging_cycle_dir = tempfile.mkdtemp(
+            prefix=".DSC_Cycle-staging-",
+            dir=os.path.dirname(final_cycle_dir),
+        )
+        staging_pic_dir = tempfile.mkdtemp(
+            prefix=".DSC_Pic-staging-",
+            dir=os.path.dirname(final_pic_dir),
+        )
+        self.cycle_dir = staging_cycle_dir
+        self.pic_dir = staging_pic_dir
+        processed_count = 0
 
-                if self.info_callback:
-                    self.info_callback(f"数据切片: {filename}...")
-
-                if self.save_seg_mode:
-                    if self.info_callback:
-                        self.info_callback(f"保存切片数据: {filename}...")
-                    self.save_data_seg()
-
-                if self.draw_seg_mode:
-                    if self.info_callback:
-                        self.info_callback(f"分循环做图: {filename}...")
-                    self.draw_img()
-
-            if self.progress_callback:
-                self.progress_callback(
-                    (pro + 1) / len(file_list),
-                    "处理进度 {}/{} {:.2f}%".format(
-                        pro + 1,
-                        len(file_list),
-                        (pro + 1) * 100 / len(file_list),
-                    ),
+        try:
+            self._emit_progress(0.01, "Preparing DSC analysis")
+            for pro, filename in enumerate(file_list):
+                self._emit_progress(
+                    0.05 + 0.65 * pro / len(file_list),
+                    f"Processing {filename}",
                 )
+                try:
+                    if not filename.lower().endswith(".txt"):
+                        raise ValueError("DSC input filename must end with .txt")
+                    resolve_contained_file(self.data_path, filename)
+                    if not self.read_file(filename):
+                        continue
+                    if self.info_callback:
+                        self.info_callback(f"预处理文件: {filename}...")
+                    self.preprocess()
+                    if not self._has_valid_processed_data():
+                        raise ValueError("No valid DSC data segments found")
 
-        if self.draw_cycle:
-            if self.info_callback:
-                self.info_callback("绘制各循环叠加图...")
-            self.cycle_draw()
+                    if self.info_callback:
+                        self.info_callback(f"数据切片: {filename}...")
+                    if self.save_seg_mode:
+                        if self.info_callback:
+                            self.info_callback(f"保存切片数据: {filename}...")
+                        self.save_data_seg()
+                    if self.draw_seg_mode:
+                        if self.info_callback:
+                            self.info_callback(f"分循环做图: {filename}...")
+                        self.draw_img()
+                    processed_count += 1
+                except Exception as exc:
+                    self.logger.error(
+                        f"处理文件 {filename} 时出错",
+                        show_ui=True,
+                        exception=exc,
+                    )
+                finally:
+                    fraction = (pro + 1) / len(file_list)
+                    self._emit_progress(
+                        0.05 + 0.7 * fraction,
+                        "处理进度 {}/{} {:.2f}%".format(
+                            pro + 1,
+                            len(file_list),
+                            fraction * 100,
+                        ),
+                    )
 
-        return True
+            if processed_count == 0:
+                return False
+
+            if self.draw_cycle:
+                if self.info_callback:
+                    self.info_callback("绘制各循环叠加图...")
+                self.cycle_draw(0.8, 0.98)
+
+            replace_directories_atomically([
+                (staging_cycle_dir, final_cycle_dir),
+                (staging_pic_dir, final_pic_dir),
+            ])
+            self._emit_progress(1.0, "DSC analysis complete")
+            return True
+        except Exception as exc:
+            self.logger.error("DSC分析失败", show_ui=True, exception=exc)
+            return False
+        finally:
+            self.cycle_dir = final_cycle_dir
+            self.pic_dir = final_pic_dir
+            if os.path.isdir(staging_cycle_dir):
+                shutil.rmtree(staging_cycle_dir, ignore_errors=True)
+            if os.path.isdir(staging_pic_dir):
+                shutil.rmtree(staging_pic_dir, ignore_errors=True)
+            plt.close("all")

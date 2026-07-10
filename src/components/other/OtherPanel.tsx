@@ -7,10 +7,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
+import { getErrorMessage } from "../../hooks/useAnalyzerFiles";
 
 export default function OtherPanel() {
   const { t } = useTranslation();
-  const { sendRequest } = usePythonBridge();
+  const { sendRequest } = usePythonBridge("system");
 
   const [folderPath, setFolderPath] = useState("");
   const [cleanFolder, setCleanFolder] = useState(false);
@@ -30,10 +31,13 @@ export default function OtherPanel() {
     }
     setCleaning(true);
     try {
-      await sendRequest("clean_folder", { folder: folderPath });
+      await sendRequest("system.clean_output", {
+        datadir: folderPath,
+        confirm: true,
+      });
       message.success(t("clean_success"));
     } catch (err) {
-      message.error(String(err));
+      message.error(getErrorMessage(err));
     } finally {
       setCleaning(false);
     }
@@ -49,8 +53,9 @@ export default function OtherPanel() {
             value={folderPath}
             onChange={(e) => setFolderPath(e.target.value)}
             placeholder={t("data_folder")}
+            disabled={cleaning}
           />
-          <Button icon={<FolderOpenOutlined />} onClick={handleBrowse}>
+          <Button icon={<FolderOpenOutlined />} onClick={handleBrowse} disabled={cleaning}>
             {t("open_folder")}
           </Button>
         </div>
