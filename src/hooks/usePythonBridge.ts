@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Command } from "@tauri-apps/plugin-shell";
+import { createSerialQueue } from "../core/serialQueue";
+import type {
+  AnalyzerName,
+  RpcMethod,
+  RpcParams,
+  RpcResult,
+  SendRpcRequest,
+} from "../types/rpc";
 
-export type BridgeAnalyzer = "gpc" | "mw" | "dsc" | "ir" | "other" | "system";
+export type BridgeAnalyzer = AnalyzerName;
 
 interface JsonRpcRequest {
   jsonrpc: "2.0";
@@ -52,6 +60,7 @@ let spawnPromise: Promise<void> | null = null;
 let sidecarGeneration = 0;
 let requestId = 0;
 let stdoutBuffer = "";
+const requestQueue = createSerialQueue();
 const lastProgressSnapshots = new Map<BridgeAnalyzer, ProgressInfo>();
 
 const SHORT_REQUEST_TIMEOUT_MS = 30_000;
@@ -205,11 +214,11 @@ async function ensureSidecarSpawned() {
   return spawnPromise;
 }
 
-async function sendJsonRpcRequest(
+async function performJsonRpcRequest<M extends RpcMethod>(
   analyzer: BridgeAnalyzer,
-  method: string,
-  params?: Record<string, unknown>,
-) {
+  method: M,
+  params: RpcParams<M>,
+): Promise<RpcResult<M>> {
   await ensureSidecarSpawned();
   if (!sidecarChild) {
     throw new Error("Sidecar not connected");
@@ -231,7 +240,7 @@ async function sendJsonRpcRequest(
     emitProgress(analyzer, { analyzer, requestId: id, progress: 0, message: "" });
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise<RpcResult<M>>((resolve, reject) => {
     const timeoutMs = method.endsWith(".analyze")
       ? ANALYZE_REQUEST_TIMEOUT_MS
       : SHORT_REQUEST_TIMEOUT_MS;
@@ -244,7 +253,13 @@ async function sendJsonRpcRequest(
       void resetSidecar(error);
     }, timeoutMs);
 
-    pendingRequests.set(id, { resolve, reject, analyzer, method, timeout });
+    pendingRequests.set(id, {
+      resolve: (value) => resolve(value as RpcResult<M>),
+      reject,
+      analyzer,
+      method,
+      timeout,
+    });
     sidecarChild!.write(JSON.stringify(request) + "\n").catch((err: unknown) => {
       clearTimeout(timeout);
       pendingRequests.delete(id);
@@ -253,6 +268,14 @@ async function sendJsonRpcRequest(
       void resetSidecar(error);
     });
   });
+}
+
+function sendJsonRpcRequest<M extends RpcMethod>(
+  analyzer: BridgeAnalyzer,
+  method: M,
+  params: RpcParams<M>,
+): Promise<RpcResult<M>> {
+  return requestQueue.run(() => performJsonRpcRequest(analyzer, method, params));
 }
 
 export function usePythonBridge(analyzer: BridgeAnalyzer) {
@@ -277,9 +300,8 @@ export function usePythonBridge(analyzer: BridgeAnalyzer) {
     };
   }, [analyzer]);
 
-  const sendRequest = useCallback(
-    (method: string, params?: Record<string, unknown>): Promise<unknown> =>
-      sendJsonRpcRequest(analyzer, method, params),
+  const sendRequest = useCallback<SendRpcRequest>(
+    (method, params) => sendJsonRpcRequest(analyzer, method, params),
     [analyzer],
   );
 

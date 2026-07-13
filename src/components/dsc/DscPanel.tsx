@@ -21,6 +21,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
 import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
+import { useAnalysisProfiles } from "../../hooks/useAnalysisProfiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
@@ -35,8 +36,7 @@ export default function DscPanel() {
   const savedSettings = useSettingsStore((s) => s.savedSettings.dsc);
   const updateAnalyzerSettings = useSettingsStore((s) => s.updateAnalyzerSettings);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-  const saveSettings = useSettingsStore((s) => s.saveSettings);
-  const deleteSettings = useSettingsStore((s) => s.deleteSettings);
+  const { saveProfile, deleteProfile } = useAnalysisProfiles("dsc", sendRequest);
 
   const [folderPath, setFolderPath] = useState("");
   const {
@@ -386,12 +386,12 @@ export default function DscPanel() {
                   loadSettings("dsc", name);
                 }}
                 onSave={(name) => {
-                  saveSettings("dsc", name);
                   setCurrentSetting(name);
+                  void saveProfile(name).catch((error) => message.error(getErrorMessage(error)));
                 }}
                 onDelete={(name) => {
-                  deleteSettings("dsc", name);
-                  setCurrentSetting("");
+                  setCurrentSetting("default");
+                  void deleteProfile(name).catch((error) => message.error(getErrorMessage(error)));
                 }}
               />
             ),

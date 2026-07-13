@@ -6,6 +6,7 @@ All Streamlit dependencies have been removed; UI display is handled externally.
 """
 
 import os
+import shutil
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -33,7 +34,9 @@ from .base import (
     PERCENTAGE_FACTOR,
     BAR_POSITION_WEIGHT_LEFT,
     BAR_POSITION_WEIGHT_RIGHT,
+    replace_directories_atomically,
     resolve_contained_file,
+    stage_output_directory,
 )
 from .plotting import configure_plotting
 
@@ -469,7 +472,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         """输出数据（占位）"""
         _column = ["Samplename", "Mp", "Mn", "Mw", "Mz", "Mz+1", "Mv", "PD"]
 
-    def run(self) -> bool:
+    def _run_to_output(self) -> bool:
         """运行分析流程 — 处理所有选中的文件，生成分子量分布图"""
         if not self.selected_file:
             self.logger.warning("没有选中文件", show_ui=True)
@@ -507,3 +510,21 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
                     )
 
         return processed_count > 0
+
+    def run(self) -> bool:
+        """Run Mw analysis and commit its complete output atomically."""
+        final_output_dir = self.output_dir
+        staging_dir = stage_output_directory(
+            final_output_dir,
+            ".Mw_output-staging-",
+        )
+        self.output_dir = staging_dir
+        try:
+            if not self._run_to_output():
+                return False
+            replace_directories_atomically([(staging_dir, final_output_dir)])
+            return True
+        finally:
+            self.output_dir = final_output_dir
+            if os.path.isdir(staging_dir):
+                shutil.rmtree(staging_dir, ignore_errors=True)

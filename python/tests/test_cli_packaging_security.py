@@ -63,7 +63,7 @@ class ApiInputValidationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             gpc_response = api._handle_request({
                 "jsonrpc": "2.0",
-                "method": "gpc.check_output",
+                "method": "gpc.analyze",
                 "params": {"datadir": temp_dir, "output_filename": "../escape"},
                 "id": 1,
             })
@@ -105,6 +105,23 @@ class ApiInputValidationTests(unittest.TestCase):
 
 
 class CliSafetyTests(unittest.TestCase):
+    def test_cli_exposes_ir_analysis_and_profiles(self):
+        parser = cli.build_parser()
+        ir_args = parser.parse_args([
+            "ir",
+            "--datadir",
+            "/tmp",
+            "--no-overlay",
+            "--normalization-peak",
+            "1450",
+        ])
+        profile_args = parser.parse_args(["settings", "list", "--type", "ir"])
+
+        self.assertIs(ir_args.func, cli._run_ir)
+        self.assertFalse(ir_args.draw_overlay)
+        self.assertEqual(1450.0, ir_args.normalization_peak)
+        self.assertEqual("ir", profile_args.type)
+
     def test_cli_file_listing_returns_regular_files_only(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             Path(temp_dir, "sample.rst").write_text("data", encoding="utf-8")
@@ -144,15 +161,15 @@ class CliSafetyTests(unittest.TestCase):
 
 
 class PackagingTests(unittest.TestCase):
-    def test_hidden_imports_are_split_and_cli_excludes_ir_and_scipy(self):
+    def test_hidden_imports_include_all_analyzers_and_exclude_scipy(self):
         sidecar = set(build_sidecar.SIDECAR_HIDDEN_IMPORTS)
         cli_imports = set(build_sidecar.CLI_HIDDEN_IMPORTS)
 
         self.assertIn("analyzer.ir", sidecar)
-        self.assertNotIn("analyzer.ir", cli_imports)
+        self.assertIn("analyzer.ir", cli_imports)
         self.assertNotIn("scipy", sidecar)
         self.assertNotIn("scipy", cli_imports)
-        self.assertTrue({"analyzer.gpc", "analyzer.mw", "analyzer.dsc"} <= cli_imports)
+        self.assertTrue({"analyzer.gpc", "analyzer.mw", "analyzer.dsc", "analyzer.ir"} <= cli_imports)
 
     def test_build_executable_requires_explicit_hidden_imports(self):
         parameters = inspect.signature(build_sidecar.build_executable).parameters

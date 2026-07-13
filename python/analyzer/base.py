@@ -12,6 +12,7 @@ import logging
 import platform
 import shutil
 import subprocess
+import tempfile
 import uuid
 import numpy as np
 from pathlib import Path
@@ -47,6 +48,12 @@ def _get_user_data_dir() -> Path:
 
 def get_install_dir() -> str:
     """Return the writable data root for packaged or development execution."""
+    override = os.environ.get("POLYANALYZER_DATA_DIR")
+    if override:
+        data_dir = Path(override).expanduser().resolve()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        return str(data_dir)
+
     if getattr(sys, "frozen", False):
         exe_dir = Path(sys.executable).resolve().parent
         development_root = _find_development_root(exe_dir)
@@ -59,6 +66,26 @@ def get_install_dir() -> str:
 
     # base.py -> analyzer/ -> python/ -> project_root/
     return os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+def get_profile_dir(analyzer_type: str) -> str:
+    """Return an analyzer-specific Analysis Profile directory and seed legacy defaults."""
+    if analyzer_type not in {"mw", "dsc", "ir"}:
+        raise ValueError(f"Unsupported analyzer profile type: {analyzer_type}")
+    setting_root = Path(get_install_dir()) / "setting"
+    profile_dir = setting_root / "profiles" / analyzer_type
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    legacy_defaults = {
+        "mw": "defaultSetting.ini",
+        "dsc": "defaultDSCSetting.ini",
+        "ir": "defaultIRSetting.ini",
+    }
+    default_name = legacy_defaults[analyzer_type]
+    legacy_path = setting_root / default_name
+    profile_path = profile_dir / default_name
+    if legacy_path.is_file() and not legacy_path.is_symlink() and not profile_path.exists():
+        shutil.copy2(legacy_path, profile_path)
+    return str(profile_dir)
 
 
 def validate_basename(name: str, label: str = "filename") -> str:
@@ -123,6 +150,24 @@ def replace_directories_atomically(replacements: List[Tuple[str, str]]) -> None:
                 _remove_path(backup)
 
 
+def stage_output_directory(final_dir: str, prefix: str) -> str:
+    """Create a writable copy of an output directory for transactional updates."""
+    parent = os.path.dirname(final_dir)
+    os.makedirs(parent, exist_ok=True)
+    staging_dir = tempfile.mkdtemp(prefix=prefix, dir=parent)
+    if not os.path.lexists(final_dir):
+        return staging_dir
+    if os.path.islink(final_dir) or not os.path.isdir(final_dir):
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        raise ValueError(f"Output path must be a regular directory: {final_dir}")
+    try:
+        shutil.copytree(final_dir, staging_dir, dirs_exist_ok=True)
+    except Exception:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        raise
+    return staging_dir
+
+
 # ---------------------------------------------------------------------------
 # Matplotlib backend (non-interactive)
 # ---------------------------------------------------------------------------
@@ -131,7 +176,7 @@ os.environ["MPLBACKEND"] = "Agg"
 # ---------------------------------------------------------------------------
 # Constants — default settings
 # ---------------------------------------------------------------------------
-APP_VERSION: str = "2.2.1"
+APP_VERSION: str = "2.3.0"
 DEFAULT_BAR_COLOR: str = "#002FA7"
 DEFAULT_MW_COLOR: str = "#FF6A07"
 DEFAULT_SETTING_NAME: str = "defaultSetting.ini"
@@ -348,10 +393,15 @@ class SettingsManager:
         return setting_path
 
     def list_settings(self) -> List[str]:
-        return [
-            os.path.basename(i)
-            for i in glob.glob(os.path.join(self.setting_dir, "*.ini"))
-        ]
+        return sorted(
+            name
+            for name in os.listdir(self.setting_dir)
+            if os.path.isfile(os.path.join(self.setting_dir, name))
+            and not os.path.islink(os.path.join(self.setting_dir, name))
+            and not name.startswith(".")
+            and name != "language.json"
+            and Path(name).suffix.lower() in {".ini", ".json"}
+        )
 
     def load_setting(self, setting_name: Optional[str] = None) -> Dict[str, Any]:
         name = setting_name if setting_name else self.setting_name
@@ -388,7 +438,10 @@ class SettingsManager:
             "draw_table": ["drawTable"],
             "transparent_back": ["transparentBack"],
             "segmentpos": [],
-            "curve_color": [],
+            "curve_color": ["curveColor"],
+            "draw_overlay": ["drawOverlay"],
+            "normalize_overlay": ["normalizeOverlay"],
+            "normalization_peak": ["normalizationPeak"],
         }
 
         for new_key, old_keys in key_mappings.items():

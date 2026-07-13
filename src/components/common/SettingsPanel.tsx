@@ -60,7 +60,7 @@ export default function SettingsPanel({
           okText={t("confirm")}
           cancelText={t("cancel")}
         >
-          <Button danger icon={<DeleteOutlined />}>
+          <Button danger icon={<DeleteOutlined />} disabled={currentSetting === "default"}>
             {t("delete_setting")}
           </Button>
         </Popconfirm>

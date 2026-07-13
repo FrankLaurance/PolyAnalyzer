@@ -63,6 +63,7 @@ CLI_HIDDEN_IMPORTS = [
     "analyzer.gpc",
     "analyzer.mw",
     "analyzer.dsc",
+    "analyzer.ir",
 ]
 
 EXCLUDED_MODULES = [

@@ -41,9 +41,17 @@ DSC_Pic/
 GPC_output/
 Mw_output/
 IR_output/
+setting/*.ini
+setting/*.json
+setting/profiles/
+!setting/defaultSetting.ini
+!setting/defaultDSCSetting.ini
+!setting/defaultIRSetting.ini
+!setting/language.json
 
 # Tauri
 src-tauri/gen/
+src-tauri/binaries/*
 
 # Data files
 datapath/*.rst

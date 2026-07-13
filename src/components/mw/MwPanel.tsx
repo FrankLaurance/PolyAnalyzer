@@ -23,6 +23,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
 import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
+import { useAnalysisProfiles } from "../../hooks/useAnalysisProfiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
@@ -41,8 +42,7 @@ export default function MwPanel() {
   const savedSettings = useSettingsStore((s) => s.savedSettings.mw);
   const updateAnalyzerSettings = useSettingsStore((s) => s.updateAnalyzerSettings);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-  const saveSettings = useSettingsStore((s) => s.saveSettings);
-  const deleteSettings = useSettingsStore((s) => s.deleteSettings);
+  const { saveProfile, deleteProfile } = useAnalysisProfiles("mw", sendRequest);
 
   const [folderPath, setFolderPath] = useState("");
   const {
@@ -422,12 +422,12 @@ export default function MwPanel() {
                   loadSettings("mw", name);
                 }}
                 onSave={(name) => {
-                  saveSettings("mw", name);
                   setCurrentSetting(name);
+                  void saveProfile(name).catch((error) => message.error(getErrorMessage(error)));
                 }}
                 onDelete={(name) => {
-                  deleteSettings("mw", name);
-                  setCurrentSetting("");
+                  setCurrentSetting("default");
+                  void deleteProfile(name).catch((error) => message.error(getErrorMessage(error)));
                 }}
               />
             ),

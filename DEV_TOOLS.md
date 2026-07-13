@@ -16,6 +16,7 @@ pnpm install
 
 ```bash
 pnpm dev
+pnpm test
 pnpm build
 ```
 
@@ -49,7 +50,7 @@ source .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 
 python -m pip install -r python/requirements.txt
-python -m pip install pyinstaller
+python -m pip install -r python/requirements-build.txt
 ```
 
 运行测试并构建当前平台的 sidecar：
@@ -59,7 +60,7 @@ python -m unittest discover -s python/tests -p "test_*.py"
 python python/build_sidecar.py
 ```
 
-不要手工改写 `src-tauri/binaries/` 中的产物；应始终由 `python/build_sidecar.py` 生成。
+`src-tauri/binaries/` 是忽略的生成目录，不提交到 Git。不要手工改写其中的产物；应始终由 `python/build_sidecar.py` 生成。
 
 ## 4. 桌面联调和打包
 

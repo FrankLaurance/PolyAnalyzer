@@ -31,6 +31,7 @@ from analyzer import (
     DEFAULT_TRANSPARENT_BACK,
     SettingsManager,
     get_install_dir,
+    get_profile_dir,
 )
 from analyzer.base import resolve_contained_file, validate_basename
 
@@ -209,6 +210,18 @@ def _emit_result(args: argparse.Namespace, payload: dict[str, Any]) -> None:
 
 
 def _default_settings(kind: str) -> tuple[str, dict[str, Any]]:
+    if kind == "ir":
+        return "defaultIRSetting.ini", {
+            "curve_color": "#D62728",
+            "transparent_back": DEFAULT_TRANSPARENT_BACK,
+            "line_width": 1.0,
+            "axis_width": 1.0,
+            "title_font_size": 20,
+            "axis_font_size": 14,
+            "draw_overlay": True,
+            "normalize_overlay": True,
+            "normalization_peak": 1450.0,
+        }
     if kind == "dsc":
         return DEFAULT_DSC_SETTING_NAME, {
             "curve_color": DEFAULT_BAR_COLOR,
@@ -238,7 +251,7 @@ def _default_settings(kind: str) -> tuple[str, dict[str, Any]]:
 def _settings_manager(kind: str) -> SettingsManager:
     default_name, default_content = _default_settings(kind)
     return SettingsManager(
-        os.path.join(get_install_dir(), "setting"),
+        get_profile_dir(kind),
         default_name,
         default_content,
     )
@@ -331,7 +344,7 @@ def _run_mw(args: argparse.Namespace) -> int:
         draw_bar=_resolve_setting_value(args, "draw_bar", setting, "draw_bar", True),
         draw_mw=_resolve_setting_value(args, "draw_mw", setting, "draw_mw", True),
         draw_table=_resolve_setting_value(args, "draw_table", setting, "draw_table", True),
-        setting_name=setting_name,
+        setting_name=DEFAULT_SETTING_NAME,
         progress_callback=_progress_callback(args),
     )
     analyzer.selected_file = selected_files
@@ -374,7 +387,7 @@ def _run_dsc(args: argparse.Namespace) -> int:
         center_peak=args.center_peak,
         left_length=args.left_length,
         right_length=args.right_length,
-        setting_name=setting_name,
+        setting_name=DEFAULT_DSC_SETTING_NAME,
         curve_color=_resolve_setting_value(args, "curve_color", setting, "curve_color", DEFAULT_BAR_COLOR),
         line_width=_resolve_setting_value(args, "line_width", setting, "line_width", 1.0),
         axis_width=_resolve_setting_value(args, "axis_width", setting, "axis_width", 1.0),
@@ -398,6 +411,61 @@ def _run_dsc(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _run_ir(args: argparse.Namespace) -> int:
+    from analyzer.ir import IRAnalyzer
+
+    datadir = _ensure_datadir(args.datadir)
+    selected_files = _validate_selected_files(datadir, _flatten_files(args.files), "*.dpt")
+    setting_name = args.setting or _default_settings("ir")[0]
+    setting = _clean_setting("ir", _settings_manager("ir").load_setting(setting_name))
+
+    analyzer = IRAnalyzer(
+        datadir=datadir,
+        selected_files=selected_files,
+        curve_color=_resolve_setting_value(args, "curve_color", setting, "curve_color", "#D62728"),
+        line_width=_resolve_setting_value(args, "line_width", setting, "line_width", 1.0),
+        axis_width=_resolve_setting_value(args, "axis_width", setting, "axis_width", 1.0),
+        title_font_size=_resolve_setting_value(args, "title_font_size", setting, "title_font_size", 20),
+        axis_font_size=_resolve_setting_value(args, "axis_font_size", setting, "axis_font_size", 14),
+        transparent_back=_resolve_setting_value(
+            args,
+            "transparent_back",
+            setting,
+            "transparent_back",
+            DEFAULT_TRANSPARENT_BACK,
+        ),
+        draw_overlay=_resolve_setting_value(args, "draw_overlay", setting, "draw_overlay", True),
+        normalize_overlay=_resolve_setting_value(
+            args,
+            "normalize_overlay",
+            setting,
+            "normalize_overlay",
+            True,
+        ),
+        normalization_peak=_resolve_setting_value(
+            args,
+            "normalization_peak",
+            setting,
+            "normalization_peak",
+            1450.0,
+        ),
+        progress_callback=_progress_callback(args),
+    )
+
+    if not analyzer.run():
+        raise CliError("IR analysis failed")
+
+    _emit_result(args, {
+        "success": True,
+        "message": "IR analysis complete",
+        "output_dir": analyzer.output_dir,
+        "files": selected_files,
+        "generated_files": analyzer.generated_files,
+        "processed_count": analyzer.processed_count,
+    })
+    return EXIT_OK
+
+
 def _run_clean(args: argparse.Namespace) -> int:
     datadir = _ensure_datadir(args.datadir)
     if not args.yes:
@@ -409,6 +477,7 @@ def _run_clean(args: argparse.Namespace) -> int:
         os.path.join(base, "GPC_output"),
         os.path.join(base, "DSC_Cycle"),
         os.path.join(base, "DSC_Pic"),
+        os.path.join(get_install_dir(), "IR_output"),
     ]
     cleaned: list[str] = []
     for path in output_dirs:
@@ -568,29 +637,57 @@ def build_parser() -> argparse.ArgumentParser:
     _add_style_args(dsc, include_bar=False)
     dsc.set_defaults(func=_run_dsc)
 
+    ir_parser = subparsers.add_parser("ir", help="Run IR analysis for .dpt files.")
+    _add_common_output_args(ir_parser)
+    ir_parser.add_argument("--datadir", required=True, help="Directory containing input .dpt files.")
+    _add_file_args(ir_parser)
+    ir_parser.add_argument("--setting", help="Analysis profile name to load before applying CLI overrides.")
+    _add_style_args(ir_parser, include_bar=False)
+    overlay_group = ir_parser.add_mutually_exclusive_group()
+    overlay_group.add_argument("--overlay", dest="draw_overlay", action="store_true", default=None)
+    overlay_group.add_argument("--no-overlay", dest="draw_overlay", action="store_false")
+    normalize_group = ir_parser.add_mutually_exclusive_group()
+    normalize_group.add_argument(
+        "--normalize-overlay",
+        dest="normalize_overlay",
+        action="store_true",
+        default=None,
+    )
+    normalize_group.add_argument(
+        "--no-normalize-overlay",
+        dest="normalize_overlay",
+        action="store_false",
+    )
+    ir_parser.add_argument(
+        "--normalization-peak",
+        type=float,
+        help="Normalization peak in cm^-1 (400-4000).",
+    )
+    ir_parser.set_defaults(func=_run_ir)
+
     clean = subparsers.add_parser("clean", help="Clean known output directories next to --datadir.")
     _add_common_output_args(clean)
     clean.add_argument("--datadir", required=True, help="Data directory whose sibling output folders should be cleaned.")
     clean.add_argument("--yes", action="store_true", help="Confirm output directory cleanup.")
     clean.set_defaults(func=_run_clean)
 
-    settings = subparsers.add_parser("settings", help="Manage MW/DSC plot settings.")
+    settings = subparsers.add_parser("settings", help="Manage MW/DSC/IR analysis profiles.")
     settings_subparsers = settings.add_subparsers(dest="settings_command")
 
     settings_list = settings_subparsers.add_parser("list", help="List settings.")
     _add_common_output_args(settings_list)
-    settings_list.add_argument("--type", choices=["mw", "dsc"], default="mw")
+    settings_list.add_argument("--type", choices=["mw", "dsc", "ir"], default="mw")
     settings_list.set_defaults(func=_settings_list)
 
     settings_show = settings_subparsers.add_parser("show", help="Show a setting as JSON.")
     _add_common_output_args(settings_show)
-    settings_show.add_argument("--type", choices=["mw", "dsc"], default="mw")
+    settings_show.add_argument("--type", choices=["mw", "dsc", "ir"], default="mw")
     settings_show.add_argument("--name", help="Setting file name. Defaults to the analyzer default.")
     settings_show.set_defaults(func=_settings_show)
 
     settings_save = settings_subparsers.add_parser("save", help="Save a setting.")
     _add_common_output_args(settings_save)
-    settings_save.add_argument("--type", choices=["mw", "dsc"], default="mw")
+    settings_save.add_argument("--type", choices=["mw", "dsc", "ir"], default="mw")
     settings_save.add_argument("--name", required=True, help="Setting file name to save.")
     settings_save.add_argument("--base", help="Existing setting to load before applying --set.")
     settings_save.add_argument("--from-json", help="Read setting object from a JSON file.")
@@ -599,7 +696,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     settings_delete = settings_subparsers.add_parser("delete", help="Delete a setting.")
     _add_common_output_args(settings_delete)
-    settings_delete.add_argument("--type", choices=["mw", "dsc"], default="mw")
+    settings_delete.add_argument("--type", choices=["mw", "dsc", "ir"], default="mw")
     settings_delete.add_argument("--name", required=True, help="Setting file name to delete.")
     settings_delete.set_defaults(func=_settings_delete)
 

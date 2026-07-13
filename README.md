@@ -36,7 +36,7 @@ source .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 
 python -m pip install -r python/requirements.txt
-python -m pip install pyinstaller
+python -m pip install -r python/requirements-build.txt
 pnpm install
 
 python python/build_sidecar.py
@@ -49,7 +49,9 @@ pnpm tauri dev
 
 ```bash
 python -m unittest discover -s python/tests -p "test_*.py"
+pnpm test
 pnpm build
+python python/build_sidecar.py
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
@@ -87,7 +89,9 @@ GitHub Actions 在 tag 构建时会从 `vX.Y.Z` 提取 `X.Y.Z` 并先运行该�
 python python/cli.py --help
 ```
 
-完整参数见 [CLI_USAGE.md](CLI_USAGE.md) 和 [CLI_USAGE_EN.md](CLI_USAGE_EN.md)。
+CLI 覆盖 GPC、Mw、DSC 和 IR；完整参数见 [CLI_USAGE.md](CLI_USAGE.md) 和 [CLI_USAGE_EN.md](CLI_USAGE_EN.md)。
+
+桌面界面与 CLI 共用 `setting/profiles/{mw,dsc,ir}/` 下的 Analysis Profile。旧版默认配置会自动迁移；桌面端保留 localStorage 缓存，并在 sidecar 连接后双向同步命名配置。
 
 ## 输出位置
 

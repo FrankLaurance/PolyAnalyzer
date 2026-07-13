@@ -1,8 +1,8 @@
 # PolyAnalyzer CLI 使用说明
 
-`poly` 是 PolyAnalyzer 的批处理命令行工具，适合把 GPC、Mw 和 DSC 分析接入脚本、批量任务或自动化流程。CLI 只生成文件和命令行结果，不打开桌面界面，也不预览图片。
+`poly` 是 PolyAnalyzer 的批处理命令行工具，适合把 GPC、Mw、DSC 和 IR 分析接入脚本、批量任务或自动化流程。CLI 只生成文件和命令行结果，不打开桌面界面，也不预览图片。
 
-原则：桌面界面中有批处理意义的设置，都应有对应 CLI 参数。保存到 `setting/` 的 Mw/DSC 设置文件可以通过 `--setting` 载入；命令行显式传入的参数优先级高于设置文件。
+原则：桌面界面中有批处理意义的设置，都应有对应 CLI 参数。保存到 `setting/` 的 Mw/DSC/IR Analysis Profile 可以通过 `--setting` 载入；命令行显式传入的参数优先级高于配置文件。
 
 ## 安装与调用
 
@@ -196,9 +196,45 @@ poly dsc \
 - `DSC_Cycle/Cycle*/result.png`
 - `DSC_Pic/{样品名}/Cycle *.png`
 
+## IR 分析
+
+输入目录必须包含 `.dpt` 文件。输出位于 PolyAnalyzer 可写数据根目录的 `IR_output/`。
+
+```bash
+poly ir --datadir ../IR
+```
+
+指定文件、配置和峰归一化位置：
+
+```bash
+poly ir \
+  --datadir ../IR \
+  --file 26-17.dpt 26-9.dpt \
+  --setting defaultIRSetting.ini \
+  --normalization-peak 1450 \
+  --curve-color '#D62728'
+```
+
+常用参数：
+
+| 参数 | 说明 |
+|------|------|
+| `--file NAME ...` | 只处理指定 `.dpt` 文件，可重复 |
+| `--setting NAME` | 载入 IR Analysis Profile |
+| `--overlay` / `--no-overlay` | 是否生成叠加图 |
+| `--normalize-overlay` / `--no-normalize-overlay` | 是否对叠加图进行峰归一化 |
+| `--normalization-peak N` | 归一化峰位，范围 400–4000 cm⁻¹ |
+| `--curve-color COLOR` | 单谱图和首条叠加曲线颜色 |
+
+输出文件：
+
+- `IR_output/individual/{样品名}.png`
+- `IR_output/dpt_overlay.png`（启用叠加图时）
+- `IR_output/manifest.json`
+
 ## 清理输出目录
 
-`clean` 只清理数据目录同级的已知输出目录：`Mw_output/`、`GPC_output/`、`DSC_Cycle/`、`DSC_Pic/`。必须显式传入 `--yes`。
+`clean` 只清理数据目录同级的 `Mw_output/`、`GPC_output/`、`DSC_Cycle/`、`DSC_Pic/`，以及应用可写数据根目录的 `IR_output/`。必须显式传入 `--yes`。
 
 ```bash
 poly clean --datadir ./datapath --yes
@@ -206,12 +242,13 @@ poly clean --datadir ./datapath --yes
 
 ## 设置管理
 
-设置文件保存在安装目录或源码目录下的 `setting/`。
+Analysis Profile 按类型保存在安装目录或源码目录下的 `setting/profiles/{mw,dsc,ir}/`。
 
 ```bash
 poly settings list --type mw
 poly settings show --type mw --name defaultSetting.ini
 poly settings show --type dsc --name defaultDSCSetting.ini --json
+poly settings show --type ir --name defaultIRSetting.ini --json
 ```
 
 保存设置：

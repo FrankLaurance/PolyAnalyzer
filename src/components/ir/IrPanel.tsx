@@ -23,6 +23,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { usePythonBridge } from "../../hooks/usePythonBridge";
 import { getErrorMessage, useAnalyzerFiles } from "../../hooks/useAnalyzerFiles";
+import { useAnalysisProfiles } from "../../hooks/useAnalysisProfiles";
 import { useAnalysisStore } from "../../stores/analysisStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import ProgressBar from "../common/ProgressBar";
@@ -43,8 +44,7 @@ export default function IrPanel() {
   const savedSettings = useSettingsStore((s) => s.savedSettings.ir);
   const updateAnalyzerSettings = useSettingsStore((s) => s.updateAnalyzerSettings);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
-  const saveSettings = useSettingsStore((s) => s.saveSettings);
-  const deleteSettings = useSettingsStore((s) => s.deleteSettings);
+  const { saveProfile, deleteProfile } = useAnalysisProfiles("ir", sendRequest);
 
   const [folderPath, setFolderPath] = useState("");
   const {
@@ -366,12 +366,12 @@ export default function IrPanel() {
                   loadSettings("ir", name);
                 }}
                 onSave={(name) => {
-                  saveSettings("ir", name);
                   setCurrentSetting(name);
+                  void saveProfile(name).catch((error) => message.error(getErrorMessage(error)));
                 }}
                 onDelete={(name) => {
-                  deleteSettings("ir", name);
                   setCurrentSetting("default");
+                  void deleteProfile(name).catch((error) => message.error(getErrorMessage(error)));
                 }}
               />
             ),

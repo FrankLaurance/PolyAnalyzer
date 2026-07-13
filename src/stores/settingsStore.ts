@@ -60,6 +60,10 @@ interface SettingsState {
   saveSettings: (analyzer: SettingsAnalyzer, name: string) => void;
   loadSettings: (analyzer: SettingsAnalyzer, name: string) => void;
   deleteSettings: (analyzer: SettingsAnalyzer, name: string) => void;
+  mergeSavedSettings: (
+    analyzer: SettingsAnalyzer,
+    profiles: Record<string, AnalyzerSettings>,
+  ) => void;
 }
 
 const ANALYZERS: SettingsAnalyzer[] = ["mw", "dsc", "ir"];
@@ -210,6 +214,18 @@ export const useSettingsStore = create<SettingsState>()(
             },
           };
         });
+      },
+
+      mergeSavedSettings: (analyzer, profiles) => {
+        set((state) => ({
+          savedSettings: {
+            ...state.savedSettings,
+            [analyzer]: {
+              ...state.savedSettings[analyzer],
+              ...profiles,
+            },
+          },
+        }));
       },
     }),
     {

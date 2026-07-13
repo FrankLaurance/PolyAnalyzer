@@ -28,6 +28,7 @@ from .base import (
     BAR_POSITION_WEIGHT_RIGHT,
     # Functions
     get_install_dir,
+    get_profile_dir,
     # Classes
     Logger,
     DataValidator,
@@ -79,6 +80,7 @@ __all__ = [
     "BAR_POSITION_WEIGHT_LEFT",
     "BAR_POSITION_WEIGHT_RIGHT",
     "get_install_dir",
+    "get_profile_dir",
     "Logger",
     "DataValidator",
     "SettingsManager",

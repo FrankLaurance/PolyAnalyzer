@@ -36,7 +36,7 @@ source .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 
 python -m pip install -r python/requirements.txt
-python -m pip install pyinstaller
+python -m pip install -r python/requirements-build.txt
 pnpm install
 
 python python/build_sidecar.py
@@ -49,7 +49,9 @@ pnpm tauri dev
 
 ```bash
 python -m unittest discover -s python/tests -p "test_*.py"
+pnpm test
 pnpm build
+python python/build_sidecar.py
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
@@ -87,7 +89,9 @@ Use the Python CLI directly from a source checkout:
 python python/cli.py --help
 ```
 
-See [CLI_USAGE_EN.md](CLI_USAGE_EN.md) or [CLI_USAGE.md](CLI_USAGE.md) for the complete command reference.
+The CLI covers GPC, Mw, DSC, and IR. See [CLI_USAGE_EN.md](CLI_USAGE_EN.md) or [CLI_USAGE.md](CLI_USAGE.md) for the complete command reference.
+
+The desktop app and CLI share Analysis Profiles under `setting/profiles/{mw,dsc,ir}/`. Legacy defaults migrate automatically; the desktop keeps a localStorage cache and synchronizes named profiles after connecting to the sidecar.
 
 ## Output Locations
 

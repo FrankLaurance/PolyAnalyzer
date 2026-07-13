@@ -5,9 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-import platform
 import shutil
-import subprocess
 import sys
 import traceback
 from typing import Any, Callable
@@ -20,6 +18,7 @@ from analyzer import (
     DEFAULT_MW_COLOR,
     DEFAULT_TRANSPARENT_BACK,
     get_install_dir,
+    get_profile_dir,
 )
 from analyzer.base import resolve_contained_file, validate_basename
 
@@ -194,15 +193,6 @@ def _gpc_list_files(params: dict[str, Any]) -> Any:
     return {"files": _list_files_with_suffix(datadir, ".rst")}
 
 
-def _gpc_check_output(params: dict[str, Any]) -> Any:
-    from analyzer.gpc import GPCAnalyzer
-
-    output_filename = _require_param(params, "output_filename")
-    datadir = params.get("datadir", "")
-    analyzer = GPCAnalyzer(datadir=datadir, output_filename=output_filename)
-    return {"exists": analyzer.check_dir()}
-
-
 # ---------------------------------------------------------------------------
 # MW handlers
 # ---------------------------------------------------------------------------
@@ -257,42 +247,6 @@ def _mw_analyze(params: dict[str, Any]) -> Any:
 def _mw_list_files(params: dict[str, Any]) -> Any:
     datadir = params.get("datadir", "")
     return {"files": _list_files_with_suffix(datadir, ".rst")}
-
-
-def _mw_get_segments(params: dict[str, Any]) -> Any:
-    from analyzer.mw import MolecularWeightAnalyzer
-
-    datadir = params.get("datadir", "")
-    setting_name = params.get("setting_name", DEFAULT_SETTING_NAME)
-    analyzer = MolecularWeightAnalyzer(datadir=datadir, setting_name=setting_name)
-    return {"segments": analyzer.segmentpos}
-
-
-def _mw_add_segment(params: dict[str, Any]) -> Any:
-    from analyzer.mw import MolecularWeightAnalyzer
-
-    position = _require_param(params, "position")
-    if not isinstance(position, (int, float)):
-        raise JsonRpcError(INVALID_PARAMS, "position must be a number")
-    datadir = params.get("datadir", "")
-    setting_name = params.get("setting_name", DEFAULT_SETTING_NAME)
-
-    analyzer = MolecularWeightAnalyzer(datadir=datadir, setting_name=setting_name)
-    analyzer.add_region(int(position))
-    analyzer.selectedpos = list(analyzer.segmentpos)
-    analyzer.segmentnum = len(analyzer.segmentpos)
-    return {"segments": analyzer.segmentpos}
-
-
-def _mw_check_output(params: dict[str, Any]) -> Any:
-    from analyzer.mw import MolecularWeightAnalyzer
-
-    selected_files = params.get("selected_files")
-    datadir = params.get("datadir", "")
-    analyzer = MolecularWeightAnalyzer(datadir=datadir)
-    if selected_files is not None:
-        analyzer.selected_file = selected_files
-    return {"exists": analyzer.check_dir()}
 
 
 # ---------------------------------------------------------------------------
@@ -412,9 +366,22 @@ def _ir_analyze(params: dict[str, Any]) -> Any:
 def _get_settings_manager(params: dict[str, Any]) -> SettingsManager:
     """Build a SettingsManager from request params."""
     analyzer_type = params.get("type", "mw")
-    setting_dir = os.path.join(get_install_dir(), "setting")
+    setting_dir = get_profile_dir(analyzer_type)
 
-    if analyzer_type == "dsc":
+    if analyzer_type == "ir":
+        default_name = "defaultIRSetting.ini"
+        default_content = {
+            "curve_color": "#D62728",
+            "transparent_back": DEFAULT_TRANSPARENT_BACK,
+            "line_width": 1.0,
+            "axis_width": 1.0,
+            "title_font_size": 20,
+            "axis_font_size": 14,
+            "draw_overlay": True,
+            "normalize_overlay": True,
+            "normalization_peak": 1450.0,
+        }
+    elif analyzer_type == "dsc":
         default_name = DEFAULT_DSC_SETTING_NAME
         default_content: dict[str, Any] = {
             "curve_color": DEFAULT_BAR_COLOR,
@@ -468,34 +435,13 @@ def _settings_delete(params: dict[str, Any]) -> Any:
 
 def _settings_list(params: dict[str, Any]) -> Any:
     mgr = _get_settings_manager(params)
+    mgr.load_setting()
     return {"settings": mgr.list_settings()}
 
 
 # ---------------------------------------------------------------------------
 # System handlers
 # ---------------------------------------------------------------------------
-
-def _system_open_folder(params: dict[str, Any]) -> Any:
-    path = _require_param(params, "path")
-    if not os.path.isdir(path):
-        raise JsonRpcError(INVALID_PARAMS, f"Directory does not exist: {path}")
-
-    try:
-        system = platform.system()
-        if system == "Windows":
-            os.startfile(path)  # type: ignore[attr-defined]
-        elif system == "Darwin":
-            subprocess.run(["open", path], check=True)
-        elif system == "Linux":
-            subprocess.run(["xdg-open", path], check=True)
-        else:
-            raise JsonRpcError(INTERNAL_ERROR, f"Unsupported platform: {system}")
-    except JsonRpcError:
-        raise
-    except Exception as e:
-        raise JsonRpcError(INTERNAL_ERROR, f"Failed to open folder: {e}")
-    return {"success": True}
-
 
 def _system_clean_output(params: dict[str, Any]) -> Any:
     if params.get("confirm") is not True:
@@ -547,12 +493,8 @@ def _system_get_default_ir_datapath(params: dict[str, Any]) -> Any:
 METHOD_TABLE: dict[str, MethodHandler] = {
     "gpc.analyze": _gpc_analyze,
     "gpc.list_files": _gpc_list_files,
-    "gpc.check_output": _gpc_check_output,
     "mw.analyze": _mw_analyze,
     "mw.list_files": _mw_list_files,
-    "mw.get_segments": _mw_get_segments,
-    "mw.add_segment": _mw_add_segment,
-    "mw.check_output": _mw_check_output,
     "dsc.analyze": _dsc_analyze,
     "dsc.list_files": _dsc_list_files,
     "ir.analyze": _ir_analyze,
@@ -561,7 +503,6 @@ METHOD_TABLE: dict[str, MethodHandler] = {
     "settings.save": _settings_save,
     "settings.delete": _settings_delete,
     "settings.list": _settings_list,
-    "system.open_folder": _system_open_folder,
     "system.clean_output": _system_clean_output,
     "system.get_default_datapath": _system_get_default_datapath,
     "system.get_default_ir_datapath": _system_get_default_ir_datapath,

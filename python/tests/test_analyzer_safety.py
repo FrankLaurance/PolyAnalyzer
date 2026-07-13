@@ -44,6 +44,25 @@ class InstallAndNameSafetyTests(unittest.TestCase):
     def test_development_install_dir_is_project_root(self):
         self.assertEqual(str(PROJECT_ROOT), base.get_install_dir())
 
+    def test_data_dir_override_applies_in_development(self):
+        with tempfile.TemporaryDirectory() as temp_dir, \
+                patch.dict(os.environ, {"POLYANALYZER_DATA_DIR": temp_dir}):
+            self.assertEqual(str(Path(temp_dir).resolve()), base.get_install_dir())
+
+    def test_analysis_profiles_are_isolated_and_seed_legacy_defaults(self):
+        with tempfile.TemporaryDirectory() as temp_dir, \
+                patch.dict(os.environ, {"POLYANALYZER_DATA_DIR": temp_dir}):
+            setting_dir = Path(temp_dir, "setting")
+            setting_dir.mkdir()
+            (setting_dir / "defaultSetting.ini").write_text("{}", encoding="utf-8")
+
+            mw_dir = Path(base.get_profile_dir("mw"))
+            ir_dir = Path(base.get_profile_dir("ir"))
+
+            self.assertNotEqual(mw_dir, ir_dir)
+            self.assertTrue((mw_dir / "defaultSetting.ini").is_file())
+            self.assertFalse((ir_dir / "defaultSetting.ini").exists())
+
     def test_frozen_install_without_project_uses_user_data_dir(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -94,10 +113,45 @@ class InstallAndNameSafetyTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         manager.get_setting_path(unsafe)
 
+    def test_settings_list_excludes_non_profile_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manager = base.SettingsManager(temp_dir, "default.ini", {})
+            for name in ("default.ini", "publication.json", "language.json", ".DS_Store", "notes.txt"):
+                Path(temp_dir, name).write_text("{}", encoding="utf-8")
+
+            self.assertEqual(["default.ini", "publication.json"], manager.list_settings())
+
     def test_gpc_output_name_must_be_a_basename(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             with self.assertRaises(ValueError):
                 gpc.GPCAnalyzer(temp_dir, "../escape")
+
+    def test_gpc_overwrite_check_includes_xlsx(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            data_dir = root / "data"
+            data_dir.mkdir()
+            output_dir = root / "GPC_output"
+            output_dir.mkdir()
+            (output_dir / "report.xlsx").write_text("existing", encoding="utf-8")
+
+            analyzer = gpc.GPCAnalyzer(str(data_dir), "report")
+
+            self.assertTrue(analyzer.check_dir())
+
+    def test_gpc_failure_preserves_previous_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            data_dir = root / "data"
+            data_dir.mkdir()
+            old = root / "GPC_output" / "old.txt"
+            old.parent.mkdir()
+            old.write_text("keep", encoding="utf-8")
+            analyzer = gpc.GPCAnalyzer(str(data_dir), "report")
+            analyzer.selected_file = ["missing.rst"]
+
+            self.assertFalse(analyzer.run())
+            self.assertEqual("keep", old.read_text(encoding="utf-8"))
 
     def test_excel_sheet_names_are_valid_bounded_and_unique(self):
         first = gpc.make_unique_sheet_name("sample[]:*?/\\" + "x" * 40, [])
@@ -112,17 +166,24 @@ class InstallAndNameSafetyTests(unittest.TestCase):
 class MolecularWeightFailureTests(unittest.TestCase):
     def test_all_failed_mw_inputs_return_false_and_api_error(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            analyzer = mw.MolecularWeightAnalyzer(temp_dir, draw_table=False)
+            root = Path(temp_dir)
+            data_dir = root / "data"
+            data_dir.mkdir()
+            old = root / "Mw_output" / "old.txt"
+            old.parent.mkdir()
+            old.write_text("keep", encoding="utf-8")
+            analyzer = mw.MolecularWeightAnalyzer(str(data_dir), draw_table=False)
             analyzer.selected_file = ["missing.rst"]
             with patch.object(mw, "configure_plotting", return_value=object()):
                 self.assertFalse(analyzer.run())
+            self.assertEqual("keep", old.read_text(encoding="utf-8"))
 
             with patch.object(mw, "configure_plotting", return_value=object()):
                 response = api._handle_request({
                     "jsonrpc": "2.0",
                     "method": "mw.analyze",
                     "params": {
-                        "datadir": temp_dir,
+                        "datadir": str(data_dir),
                         "selected_files": ["missing.rst"],
                         "draw_table": False,
                     },

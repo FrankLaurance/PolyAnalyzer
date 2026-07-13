@@ -8,6 +8,7 @@ All Streamlit dependencies have been removed; UI display is handled by the front
 import os
 import glob
 import re
+import shutil
 import numpy as np
 import pandas as pd
 from typing import Collection, List, Optional, Callable
@@ -20,6 +21,8 @@ from .base import (
     GPC_X_COLUMN_INDEX,
     GPC_Y_COLUMN_INDEX,
     MIN_GPC_PEAK_COLUMNS,
+    replace_directories_atomically,
+    stage_output_directory,
     validate_basename,
 )
 
@@ -93,9 +96,11 @@ class GPCAnalyzer(BaseAnalyzer):
         Returns:
             bool: 存在同名文件返回 True
         """
-        csv_path = os.path.join(self.output_dir, self.output_filename + ".csv")
-        png_path = os.path.join(self.output_dir, self.output_filename + ".png")
-        return os.path.exists(csv_path) or os.path.exists(png_path)
+        paths = [
+            os.path.join(self.output_dir, self.output_filename + suffix)
+            for suffix in (".csv", ".png", ".xlsx")
+        ]
+        return any(os.path.exists(path) for path in paths)
 
     # ------------------------------------------------------------------
     # Data preprocessing
@@ -227,7 +232,7 @@ class GPCAnalyzer(BaseAnalyzer):
     # Main entry point
     # ------------------------------------------------------------------
 
-    def run(self) -> bool:
+    def _run_to_output(self) -> bool:
         """运行 GPC 分析流程
 
         Returns:
@@ -283,3 +288,21 @@ class GPCAnalyzer(BaseAnalyzer):
             return False
 
         return True
+
+    def run(self) -> bool:
+        """Run GPC analysis and commit its complete output atomically."""
+        final_output_dir = self.output_dir
+        staging_dir = stage_output_directory(
+            final_output_dir,
+            ".GPC_output-staging-",
+        )
+        self.output_dir = staging_dir
+        try:
+            if not self._run_to_output():
+                return False
+            replace_directories_atomically([(staging_dir, final_output_dir)])
+            return True
+        finally:
+            self.output_dir = final_output_dir
+            if os.path.isdir(staging_dir):
+                shutil.rmtree(staging_dir, ignore_errors=True)

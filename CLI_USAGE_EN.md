@@ -1,8 +1,8 @@
 # PolyAnalyzer CLI Usage
 
-`poly` is the PolyAnalyzer batch CLI for scripted GPC, Mw, and DSC analysis. It generates files and terminal output only; it does not open the desktop UI or preview images.
+`poly` is the PolyAnalyzer batch CLI for scripted GPC, Mw, DSC, and IR analysis. It generates files and terminal output only; it does not open the desktop UI or preview images.
 
-Rule: every desktop setting that matters for batch analysis should have a CLI argument. Saved Mw/DSC settings under `setting/` can be loaded with `--setting`; explicit CLI arguments override the setting file.
+Rule: every desktop setting that matters for batch analysis should have a CLI argument. Saved Mw/DSC/IR Analysis Profiles under `setting/` can be loaded with `--setting`; explicit CLI arguments override the profile.
 
 ## Installation And Invocation
 
@@ -196,9 +196,45 @@ Output files:
 - `DSC_Cycle/Cycle*/result.png`
 - `DSC_Pic/{sample-name}/Cycle *.png`
 
+## IR Analysis
+
+The input directory must contain `.dpt` files. Output is committed to `IR_output/` under PolyAnalyzer's writable data root.
+
+```bash
+poly ir --datadir ../IR
+```
+
+Select files and normalization options:
+
+```bash
+poly ir \
+  --datadir ../IR \
+  --file 26-17.dpt 26-9.dpt \
+  --setting defaultIRSetting.ini \
+  --normalization-peak 1450 \
+  --curve-color '#D62728'
+```
+
+Common options:
+
+| Option | Meaning |
+|--------|---------|
+| `--file NAME ...` | Process only selected `.dpt` files; repeatable |
+| `--setting NAME` | Load an IR Analysis Profile |
+| `--overlay` / `--no-overlay` | Enable or disable the overlay plot |
+| `--normalize-overlay` / `--no-normalize-overlay` | Enable or disable peak normalization |
+| `--normalization-peak N` | Peak position from 400 to 4000 cm⁻¹ |
+| `--curve-color COLOR` | Individual plot and first overlay curve color |
+
+Outputs:
+
+- `IR_output/individual/{sample}.png`
+- `IR_output/dpt_overlay.png` when overlays are enabled
+- `IR_output/manifest.json`
+
 ## Clean Output Directories
 
-`clean` only removes known output directories next to the data directory: `Mw_output/`, `GPC_output/`, `DSC_Cycle/`, and `DSC_Pic/`. It requires `--yes`.
+`clean` removes the known GPC, Mw, and DSC output directories next to `--datadir`, plus `IR_output/` under PolyAnalyzer's writable data root. It requires explicit `--yes` confirmation.
 
 ```bash
 poly clean --datadir ./datapath --yes
@@ -206,7 +242,7 @@ poly clean --datadir ./datapath --yes
 
 ## Settings Management
 
-Settings are stored under `setting/` in the source checkout or install directory.
+Analysis Profiles are stored by analyzer under `setting/profiles/{mw,dsc,ir}/` in the source checkout or install data directory.
 
 ```bash
 poly settings list --type mw

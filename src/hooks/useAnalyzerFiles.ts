@@ -1,15 +1,11 @@
 import { useCallback, useRef, useState } from "react";
-
-type SendRequest = (
-  method: string,
-  params?: Record<string, unknown>,
-) => Promise<unknown>;
+import type { FileListMethod, SendRpcRequest } from "../types/rpc";
 
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function useAnalyzerFiles(sendRequest: SendRequest, method: string) {
+export function useAnalyzerFiles(sendRequest: SendRpcRequest, method: FileListMethod) {
   const requestSequence = useRef(0);
   const [fileList, setFileList] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -39,7 +35,7 @@ export function useAnalyzerFiles(sendRequest: SendRequest, method: string) {
     try {
       const response = await sendRequest(method, { datadir: path });
       if (sequence !== requestSequence.current) return;
-      const files = (response as { files?: string[] })?.files ?? [];
+      const files = response.files ?? [];
       setFileList(files);
       setSelectedFiles(files);
     } catch (error) {
