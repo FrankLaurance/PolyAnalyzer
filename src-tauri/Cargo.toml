@@ -1,6 +1,6 @@
 [package]
 name = "polyanalyzer"
-version = "2.3.1"
+version = "2.3.2"
 description = "Polymer Analyzer - GPC, Mw, DSC, and IR Analysis Tool"
 authors = ["Frank"]
 edition = "2021"
