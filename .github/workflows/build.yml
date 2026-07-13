@@ -147,6 +147,29 @@ jobs:
         with:
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
 
+      - name: Notarize and staple macOS DMG
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          DMG_PATH="$(
+            find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" \
+              -maxdepth 1 \
+              -name '*.dmg' \
+              -print \
+              -quit
+          )"
+
+          test -n "$DMG_PATH"
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$DMG_PATH"
+
       - name: Verify signed and notarized macOS bundle
         if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
         run: |
@@ -165,6 +188,24 @@ jobs:
           spctl --assess --type execute --verbose=4 "$APP_PATH"
           xcrun stapler validate "$APP_PATH"
           xcrun stapler validate "$DMG_PATH"
+
+      - name: Replace release DMG with stapled artifact
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DMG_PATH="$(
+            find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" \
+              -maxdepth 1 \
+              -name '*.dmg' \
+              -print \
+              -quit
+          )"
+
+          test -n "$DMG_PATH"
+          gh release upload "$GITHUB_REF_NAME" "$DMG_PATH" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
