@@ -27,6 +27,10 @@ Thumbs.db
 # Env
 .env
 .env.*
+*.p12
+*.p8
+*.certSigningRequest
+*.b64
 myenv/
 venv/
 env/

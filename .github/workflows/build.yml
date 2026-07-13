@@ -91,11 +91,46 @@ jobs:
       - name: Run Rust tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
+      - name: Import Developer ID certificate
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security default-keychain -d user -s "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+
+          APPLE_SIGNING_IDENTITY="$(
+            security find-identity -v -p codesigning "$KEYCHAIN_PATH" \
+              | awk -F'"' '/Developer ID Application/ { print $2; exit }'
+          )"
+          test -n "$APPLE_SIGNING_IDENTITY"
+          echo "APPLE_SIGNING_IDENTITY=$APPLE_SIGNING_IDENTITY" >> "$GITHUB_ENV"
+
       - name: Build Tauri app (with release)
         if: startsWith(github.ref, 'refs/tags/')
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_ID: ${{ runner.os == 'macOS' && secrets.APPLE_ID || '' }}
+          APPLE_PASSWORD: ${{ runner.os == 'macOS' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ runner.os == 'macOS' && secrets.APPLE_TEAM_ID || '' }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'PolyAnalyzer ${{ github.ref_name }}'
@@ -111,6 +146,25 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+      - name: Verify signed and notarized macOS bundle
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          APP_PATH="src-tauri/target/${{ matrix.target }}/release/bundle/macos/PolyAnalyzer.app"
+          DMG_PATH="$(
+            find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" \
+              -maxdepth 1 \
+              -name '*.dmg' \
+              -print \
+              -quit
+          )"
+
+          test -d "$APP_PATH"
+          test -n "$DMG_PATH"
+          codesign --verify --deep --strict --verbose=4 "$APP_PATH"
+          spctl --assess --type execute --verbose=4 "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+          xcrun stapler validate "$DMG_PATH"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
