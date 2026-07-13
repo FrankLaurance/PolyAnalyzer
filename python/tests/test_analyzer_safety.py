@@ -248,7 +248,7 @@ class IrRegressionTests(unittest.TestCase):
 
             plot_overlay.assert_not_called()
             self.assertEqual(
-                ["individual/sample.png", "manifest.json"],
+                [str(Path("individual", "sample.png")), "manifest.json"],
                 [str(Path(path).relative_to(analyzer.output_dir)) for path in analyzer.generated_files],
             )
 
