@@ -56,7 +56,9 @@ Exit codes:
 
 ## GPC Analysis
 
-The input directory must contain `.rst` files. Output is written to `GPC_output/` next to the data directory.
+The input directory must contain `.rst` or `.xls`/`.xlsx` (GPC instrument Excel exports) files. Output is written to `GPC_output/` next to the data directory.
+
+Excel exports are auto-detected: `LogM` columns paired with `MMD` (dw/dlogM) and `Cumulative` value columns are grouped by sample name — any number of samples/columns is supported. The Results summary sheet (Mw, Mn, Mz, Mz1, Mv, Mp, Mw/Mn) feeds the CSV summary. The GPC overlay plots logMW–dw/dlogM curves using the same units as the `.rst` version.
 
 ```bash
 poly gpc --datadir ./datapath --output-name 20260328
@@ -68,7 +70,7 @@ Common usage:
 poly gpc \
   --datadir ./datapath \
   --output-name batch-001 \
-  --file HR-D901B.rst UH-D901D.rst \
+  --file HR-D901B.rst 20260709-GPC-PP样品.xls \
   --overwrite
 ```
 
@@ -76,7 +78,7 @@ Options:
 
 | Option | Description |
 |--------|-------------|
-| `--file NAME ...` | Process only selected `.rst` files; repeatable |
+| `--file NAME ...` | Process only selected `.rst`/`.xls`/`.xlsx` files; repeatable |
 | `--overwrite` | Replace existing output with the same name |
 | `--no-csv` | Do not write the GPC CSV summary |
 | `--no-image` | Do not write the PNG image |
@@ -86,11 +88,13 @@ Output files:
 
 - `GPC_output/{output-name}.csv`
 - `GPC_output/{output-name}.png`
-- `GPC_output/{output-name}.xlsx`
+- `GPC_output/{output-name}.xlsx` (Excel input: one sheet per sample with LogM / MMD columns)
 
 ## Mw Analysis
 
-The input directory must contain `.rst` files. Output is written to `Mw_output/` next to the data directory.
+The input directory must contain `.rst` or `.xls`/`.xlsx` files. Output is written to `Mw_output/` next to the data directory.
+
+For Excel exports, each sample gets its own Mw distribution figure, saved as PNG named after the sample. The x-axis is molecular weight (10^LogM, log scale); the normalized curve and segment percentages use the same algorithm as the `.rst` version, and the stats table reads Mn/Mw/PDI from the Results summary sheet.
 
 ```bash
 poly mw --datadir ./datapath

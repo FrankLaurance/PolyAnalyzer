@@ -9,6 +9,8 @@
   "run": "Run",
   "open_folder": "Open Output Folder",
   "help": "Help",
+  "manual": "Manual",
+  "engine_warming": "Engine warming up — the first analysis may take a moment…",
   "settings": "Settings",
   "complete": "Complete! Time elapsed: {{time}}s",
 

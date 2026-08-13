@@ -6,6 +6,7 @@ All Streamlit dependencies have been removed; UI display is handled externally.
 """
 
 import os
+import re
 import shutil
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -41,8 +42,17 @@ from .base import (
 from .plotting import configure_plotting
 
 
+_INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*]')
+
+
+def _sanitize_sample_filename(name: str) -> str:
+    """Make a sample name safe for use as an output filename."""
+    cleaned = _INVALID_FILENAME_CHARS.sub("_", str(name)).strip().strip(".")
+    return cleaned or "sample"
+
+
 class MolecularWeightAnalyzer(BaseAnalyzer):
-    """分子量分布分析器 — 读取 .rst 文件并生成 Mw 分布图。"""
+    """分子量分布分析器 — 读取 .rst 或 GPC Excel 导出并生成 Mw 分布图。"""
 
     def __init__(
         self,
@@ -75,6 +85,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         self.norm: Optional[np.ndarray] = None
         self.mw: Optional[np.ndarray] = None
         self._plt: Any | None = None
+        self._excel_sample: Any | None = None
 
         # Settings manager
         default_setting: Dict[str, Any] = {
@@ -195,6 +206,10 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
 
         try:
             file_path = resolve_contained_file(self.data_path, name)
+            if os.path.splitext(name)[1].lower() in {".xls", ".xlsx"}:
+                from .excel_reader import parse_gpc_excel
+                self.excel_samples = parse_gpc_excel(file_path)
+                return True
             with open(file_path, "r", encoding="ascii") as file:
                 self.lines = [line.strip() for line in file if line.strip()]
             return True
@@ -214,6 +229,12 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
 
     def preprocess(self) -> None:
         """预处理数据文件，提取分子量和峰数据"""
+        if self.excel_samples is not None:
+            if self._excel_sample is None:
+                raise ValueError("Excel 分析缺少当前样品上下文")
+            self._prepare_excel_sample(self._excel_sample)
+            return
+
         mw_start, mw_end, slice_table_start = self.preprocess_common()
 
         # 整理分子量数据
@@ -255,6 +276,37 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
             raise ValueError("未找到有效的峰数据")
 
         self.peak_data = all_peaks
+
+    def _prepare_excel_sample(self, sample: Any) -> None:
+        """Excel 路径预处理 — 单样品换算为与 .rst 一致的单位。
+
+        - x 轴: 10^LogM（线性 Mw，与 .rst 的 MW 列一致，绘图时 log 刻度）
+        - norm: MMD × ΔLogM 归一化（Σ≈1），与 .rst 的 Norm Ht 同为
+          逐片重量分数，区间百分比与曲线归一化算法原样复用
+        """
+        from .excel_reader import format_result
+
+        self.sample_name = sample.name
+        results = sample.results
+        self.mw_data = [
+            [sample.name] + [
+                format_result(results.get(key))
+                for key in ("Mp", "Mn", "Mw", "Mz", "Mz+1", "Mv", "PD")
+            ]
+        ]
+
+        logm = sample.logm
+        widths = np.empty_like(logm)
+        widths[1:-1] = (logm[2:] - logm[:-2]) / 2.0
+        widths[0] = logm[1] - logm[0]
+        widths[-1] = logm[-1] - logm[-2]
+        weights = sample.mmd * widths
+        total = float(np.sum(weights))
+        if total <= 0:
+            raise ValueError(f"样品 {sample.name}: MMD 积分为零，无法分析")
+        self.norm = weights / total
+        self.mw = 10.0 ** logm
+        self.peak_num = len(logm)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -360,7 +412,7 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         plt.xticks(weight="bold")
         plt.yticks(weight="bold")
 
-        result_name = self.filename.split(".")[0]
+        result_name = self.title_name or self.filename.split(".")[0]
         plt.title(result_name, pad=10, fontdict=font2)
 
     def _create_distribution_table(self, fig: Any, gs: Any, segment_percentages: List[float]) -> None:
@@ -492,7 +544,19 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
                         0.05 + 0.9 * pro / len(self.file_list),
                         f"Processing {filename}",
                     )
-                if self.read_file(filename):
+                if not self.read_file(filename):
+                    continue
+                # Excel 导出每个文件含多个样品 — 每个样品单独出一张图
+                if self.excel_samples is not None:
+                    for sample in self.excel_samples.values():
+                        self._excel_sample = sample
+                        self.title_name = sample.name
+                        self.filename = _sanitize_sample_filename(sample.name)
+                        self.preprocess()
+                        self.draw_image()
+                        processed_count += 1
+                        self.logger.info(f"成功处理样品: {sample.name}")
+                else:
                     self.preprocess()
                     self.draw_image()
                     processed_count += 1

@@ -34,19 +34,32 @@ def _handle_signal(signum: int, _frame: object) -> None:
     sys.exit(0)
 
 
+def _notify_warmup(progress: float, message: str) -> None:
+    """Emit a warmup status notification for the frontend banner."""
+    from api import send_notification
+
+    send_notification(
+        "progress",
+        {"warmup": True, "progress": progress, "message": message},
+    )
+
+
 def _warm_runtime_async(logger: logging.Logger, delay: float = 3.0) -> None:
     """Warm slow analyzer imports after the sidecar is ready."""
 
     def target() -> None:
         time.sleep(delay)
+        _notify_warmup(0.0, "引擎预热中…")
         try:
             from analyzer.mw import MolecularWeightAnalyzer  # noqa: F401,WPS433
             from analyzer.plotting import warm_plotting  # noqa: WPS433
 
             warm_plotting(logger)
             logger.info("MW runtime warmed")
+            _notify_warmup(100.0, "引擎预热完成")
         except Exception as exc:
             logger.warning("Runtime warmup failed: %s", exc)
+            _notify_warmup(100.0, "引擎预热失败")
 
     threading.Thread(target=target, name="runtime-warmup", daemon=True).start()
 

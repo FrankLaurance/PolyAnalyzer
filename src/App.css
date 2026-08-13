@@ -270,3 +270,7 @@ body {
 [data-theme="dark"] .ant-radio-wrapper {
   color: var(--color-text);
 }
+
+.engine-warmup-banner {
+  margin-bottom: 8px;
+}

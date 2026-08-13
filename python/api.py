@@ -7,6 +7,7 @@ import logging
 import os
 import shutil
 import sys
+import threading
 import traceback
 from typing import Any, Callable
 
@@ -53,11 +54,15 @@ class JsonRpcError(Exception):
         return err
 
 
+_WRITE_LOCK = threading.Lock()
+
+
 def _write_response(response: dict[str, Any] | list[dict[str, Any]]) -> None:
-    """Write a JSON-RPC response to stdout."""
+    """Write a JSON-RPC response to stdout (thread-safe)."""
     line = json.dumps(response, ensure_ascii=False)
-    sys.stdout.write(line + "\n")
-    sys.stdout.flush()
+    with _WRITE_LOCK:
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
 
 
 def send_notification(method: str, params: dict[str, Any] | None = None) -> None:
@@ -100,11 +105,12 @@ def _require_param(params: dict[str, Any], key: str, label: str | None = None) -
 def _validate_selected_files(
     datadir: str,
     selected_files: Any,
-    suffix: str,
+    suffixes: str | tuple[str, ...],
     *,
     required: bool,
 ) -> list[str] | None:
     """Validate selected input names before an analyzer touches the filesystem."""
+    suffix_tuple = (suffixes,) if isinstance(suffixes, str) else suffixes
     if selected_files is None:
         if required:
             raise JsonRpcError(INVALID_PARAMS, "selected_files is required")
@@ -120,8 +126,11 @@ def _validate_selected_files(
             validate_basename(name, "selected filename")
         except (TypeError, ValueError) as exc:
             raise JsonRpcError(INVALID_PARAMS, str(exc)) from exc
-        if not name.lower().endswith(suffix.lower()):
-            raise JsonRpcError(INVALID_PARAMS, f"selected filename must end with {suffix}")
+        if not any(name.lower().endswith(suffix.lower()) for suffix in suffix_tuple):
+            raise JsonRpcError(
+                INVALID_PARAMS,
+                f"selected filename must end with one of {', '.join(suffix_tuple)}",
+            )
         try:
             resolve_contained_file(datadir, name, "selected filename")
         except (OSError, TypeError, ValueError) as exc:
@@ -150,6 +159,18 @@ def _list_files_with_suffix(datadir: str, suffix: str, *, require_datadir: bool 
     )
 
 
+def _list_files_with_suffixes(
+    datadir: str, suffixes: tuple[str, ...], *, require_datadir: bool = False
+) -> list[str]:
+    """Return the union of filenames matching any of the suffixes, sorted."""
+    names = {
+        name
+        for suffix in suffixes
+        for name in _list_files_with_suffix(datadir, suffix, require_datadir=require_datadir)
+    }
+    return sorted(names, key=str.lower)
+
+
 # ---------------------------------------------------------------------------
 # GPC handlers
 # ---------------------------------------------------------------------------
@@ -162,7 +183,7 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
     selected_files = _validate_selected_files(
         datadir,
         params.get("selected_files"),
-        ".rst",
+        _GPC_INPUT_SUFFIXES,
         required=False,
     )
     confirm_overwrite = params.get("confirm_overwrite", False)
@@ -188,9 +209,12 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
     return {"success": True, "output_dir": analyzer.output_dir}
 
 
+_GPC_INPUT_SUFFIXES: tuple[str, ...] = (".rst", ".xls", ".xlsx")
+
+
 def _gpc_list_files(params: dict[str, Any]) -> Any:
     datadir = params.get("datadir", "")
-    return {"files": _list_files_with_suffix(datadir, ".rst")}
+    return {"files": _list_files_with_suffixes(datadir, _GPC_INPUT_SUFFIXES)}
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +226,7 @@ def _mw_analyze(params: dict[str, Any]) -> Any:
     selected_files = _validate_selected_files(
         datadir,
         params.get("selected_files"),
-        ".rst",
+        _GPC_INPUT_SUFFIXES,
         required=True,
     )
     assert selected_files is not None
@@ -246,7 +270,7 @@ def _mw_analyze(params: dict[str, Any]) -> Any:
 
 def _mw_list_files(params: dict[str, Any]) -> Any:
     datadir = params.get("datadir", "")
-    return {"files": _list_files_with_suffix(datadir, ".rst")}
+    return {"files": _list_files_with_suffixes(datadir, _GPC_INPUT_SUFFIXES)}
 
 
 # ---------------------------------------------------------------------------

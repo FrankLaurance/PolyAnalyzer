@@ -56,7 +56,9 @@ macOS 示例：
 
 ## GPC 分析
 
-输入目录必须包含 `.rst` 文件。默认输出到数据目录同级的 `GPC_output/`。
+输入目录必须包含 `.rst` 或 `.xls`/`.xlsx`（GPC 仪器 Excel 导出）文件。默认输出到数据目录同级的 `GPC_output/`。
+
+Excel 导出格式自动识别：数据表中 `LogM` 与 `MMD`（dw/dlogM）、`Cumulative` 列组按样品名分组，任意样品数/列数均可；Results 汇总表（Mw、Mn、Mz、Mz1、Mv、Mp、Mw/Mn）用于 CSV 汇总。GPC 叠加图绘制 logMW–dw/dlogM 曲线，单位与 `.rst` 版本一致。
 
 ```bash
 poly gpc --datadir ./datapath --output-name 20260328
@@ -68,7 +70,7 @@ poly gpc --datadir ./datapath --output-name 20260328
 poly gpc \
   --datadir ./datapath \
   --output-name batch-001 \
-  --file HR-D901B.rst UH-D901D.rst \
+  --file HR-D901B.rst 20260709-GPC-PP样品.xls \
   --overwrite
 ```
 
@@ -76,7 +78,7 @@ poly gpc \
 
 | 参数 | 说明 |
 |------|------|
-| `--file NAME ...` | 只处理指定 `.rst` 文件，可重复 |
+| `--file NAME ...` | 只处理指定 `.rst`/`.xls`/`.xlsx` 文件，可重复 |
 | `--overwrite` | 允许覆盖同名输出 |
 | `--no-csv` | 不输出分子量汇总 CSV |
 | `--no-image` | 不输出 PNG 图片 |
@@ -86,11 +88,13 @@ poly gpc \
 
 - `GPC_output/{output-name}.csv`
 - `GPC_output/{output-name}.png`
-- `GPC_output/{output-name}.xlsx`
+- `GPC_output/{output-name}.xlsx`（Excel 输入时每样品一个 sheet，列为 LogM / MMD）
 
 ## Mw 分析
 
-输入目录必须包含 `.rst` 文件。默认输出到数据目录同级的 `Mw_output/`。
+输入目录必须包含 `.rst` 或 `.xls`/`.xlsx` 文件。默认输出到数据目录同级的 `Mw_output/`。
+
+Excel 导出中每个样品单独生成一张 Mw 分布图，PNG 以样品名命名；x 轴为分子量（10^LogM，log 刻度），归一化曲线与区间百分比算法与 `.rst` 版本一致，统计表取 Results 汇总表的 Mn/Mw/PDI。
 
 ```bash
 poly mw --datadir ./datapath

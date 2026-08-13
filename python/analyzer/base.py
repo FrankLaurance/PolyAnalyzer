@@ -176,7 +176,7 @@ os.environ["MPLBACKEND"] = "Agg"
 # ---------------------------------------------------------------------------
 # Constants — default settings
 # ---------------------------------------------------------------------------
-APP_VERSION: str = "2.3.4"
+APP_VERSION: str = "2.4.0"
 DEFAULT_BAR_COLOR: str = "#002FA7"
 DEFAULT_MW_COLOR: str = "#FF6A07"
 DEFAULT_SETTING_NAME: str = "defaultSetting.ini"
@@ -516,6 +516,10 @@ class BaseAnalyzer:
         self.peak_num: int = 0
         self.peak_pos: list = []
         self.peak_data: dict = {}
+        # Parsed Excel GPC export (None when the current file is a .rst text file)
+        self.excel_samples: Optional[Dict[str, Any]] = None
+        # Figure title override (empty = derive from filename as before)
+        self.title_name: str = ""
 
         # 运行模式
         self.test_mode: bool = test_mode
@@ -554,6 +558,8 @@ class BaseAnalyzer:
         self.mw_data = []
         self.peak_num = 0
         self.peak_pos = []
+        self.excel_samples = None
+        self.title_name = ""
         if reset_peak_data:
             self.peak_data = {}
 
@@ -578,6 +584,10 @@ class BaseAnalyzer:
 
         try:
             file_path = resolve_contained_file(self.data_path, name)
+            if Path(name).suffix.lower() in {".xls", ".xlsx"}:
+                from .excel_reader import parse_gpc_excel
+                self.excel_samples = parse_gpc_excel(file_path)
+                return True
             with open(file_path, "r", encoding="ascii") as file:
                 self.lines = [line.strip() for line in file if line.strip()]
             return True
@@ -594,12 +604,14 @@ class BaseAnalyzer:
             return False
 
     def read_file_list(self, force_refresh: bool = False) -> List[str]:
-        """读取数据目录中的所有 .rst 文件列表（带缓存）"""
+        """读取数据目录中的 GPC 数据文件列表（.rst/.xls/.xlsx，带缓存）"""
         if self._cached_file_list is None or force_refresh:
+            suffixes = {".rst", ".xls", ".xlsx"}
             self._cached_file_list = [
                 os.path.basename(i)
-                for i in glob.glob(os.path.join(self.data_path, "*.rst"))
+                for i in glob.glob(os.path.join(self.data_path, "*"))
                 if os.path.isfile(i)
+                and Path(i).suffix.lower() in suffixes
             ]
         return self._cached_file_list
 

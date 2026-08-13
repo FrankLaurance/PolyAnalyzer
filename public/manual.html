@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PolyAnalyzer 使用说明 / Manual</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f6f7f9;
+    --text: #1f2329;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --accent: #1677ff;
+    --code-bg: #f0f1f3;
+  }
+  :root[data-theme="dark"] {
+    --bg: #17181c;
+    --surface: #1f2126;
+    --text: #e8e9eb;
+    --text-secondary: #9aa1ab;
+    --border: #303238;
+    --accent: #4d94ff;
+    --code-bg: #26282e;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    font-size: 14px;
+  }
+  .toolbar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 10;
+  }
+  .toolbar .title { font-weight: 600; }
+  .toolbar button {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 24px 32px 64px;
+  }
+  h1 { font-size: 24px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+  h2 { font-size: 19px; margin-top: 36px; scroll-margin-top: 64px; }
+  h3 { font-size: 16px; margin-top: 24px; }
+  h2, h3 { color: var(--text); }
+  p, li { color: var(--text); }
+  .muted { color: var(--text-secondary); }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 13.5px;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: var(--surface); }
+  code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; }
+  ol { padding-left: 22px; }
+  .note {
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    padding: 8px 14px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 16px 0 8px;
+  }
+  .toc-title { font-weight: 600; margin-bottom: 6px; }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  .toc li { margin: 2px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  #back-to-top {
+    position: fixed;
+    right: 26px;
+    bottom: 26px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+    z-index: 20;
+  }
+  #back-to-top.visible { opacity: 1; pointer-events: auto; }
+  #back-to-top:hover { border-color: var(--accent); transform: translateY(-2px); }
+  [hidden] { display: none !important; }
+</style>
+<script>
+  function applyTheme() {
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+  }
+  function currentLang() {
+    const stored = localStorage.getItem("polyanalyzer-language");
+    return stored && stored.startsWith("en") ? "en" : "zh";
+  }
+  function applyLang(lang) {
+    const target = lang === "en" ? "en" : "zh";
+    document.documentElement.lang = target === "en" ? "en" : "zh";
+    document.querySelectorAll("[data-lang]").forEach((el) => {
+      el.hidden = el.getAttribute("data-lang") !== target;
+    });
+    const btn = document.getElementById("lang-toggle");
+    btn.textContent = target === "en" ? "中文" : "English";
+  }
+  window.addEventListener("DOMContentLoaded", () => {
+    applyTheme();
+    applyLang(currentLang());
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+    document.getElementById("lang-toggle").addEventListener("click", () => {
+      applyLang(currentLang() === "en" ? "zh" : "en");
+    });
+    const backToTop = document.getElementById("back-to-top");
+    backToTop.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    window.addEventListener("scroll", () => {
+      backToTop.classList.toggle("visible", window.scrollY > 400);
+    }, { passive: true });
+  });
+</script>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="title" data-lang="zh">PolyAnalyzer 使用说明</span>
+    <span class="title" data-lang="en" hidden>PolyAnalyzer Manual</span>
+    <button id="lang-toggle">English</button>
+  </div>
+  <div class="container">
+
+    <!-- ============ 中文 ============ -->
+    <div data-lang="zh">
+      <h1>PolyAnalyzer 使用说明</h1>
+      <p class="muted">版本 2.4.0 · 聚合物分析桌面应用（GPC / Mw / DSC / IR）</p>
+
+      <nav class="toc">
+        <div class="toc-title">目录</div>
+        <ol>
+          <li><a href="#zh-1">功能概览</a></li>
+          <li><a href="#zh-2">通用操作</a></li>
+          <li><a href="#zh-3">GPC</a></li>
+          <li><a href="#zh-4">Mw</a></li>
+          <li><a href="#zh-5">DSC</a></li>
+          <li><a href="#zh-6">IR</a></li>
+          <li><a href="#zh-7">设置预设</a></li>
+          <li><a href="#zh-8">清理输出</a></li>
+          <li><a href="#zh-9">输入格式</a></li>
+          <li><a href="#zh-10">常见问题</a></li>
+          <li><a href="#zh-11">命令行</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="zh-1">1. 功能概览</h2>
+      <p>PolyAnalyzer 提供五个标签页：</p>
+      <table>
+        <tr><th>标签页</th><th>用途</th><th>输入格式</th></tr>
+        <tr><td>GPC</td><td>凝胶渗透色谱汇总与叠加图</td><td><code>.rst</code> / <code>.xls</code> / <code>.xlsx</code></td></tr>
+        <tr><td>Mw</td><td>分子量分布与区间统计</td><td><code>.rst</code> / <code>.xls</code> / <code>.xlsx</code></td></tr>
+        <tr><td>DSC</td><td>差示扫描量热分段与循环分析</td><td><code>.txt</code></td></tr>
+        <tr><td>IR</td><td>红外 DPT 单谱与叠加谱</td><td><code>.dpt</code></td></tr>
+        <tr><td>其他</td><td>清理已知输出目录</td><td>目录</td></tr>
+      </table>
+      <p>顶部语言选择器可切换中文和英文。已访问的标签页会保留目录、文件选择、参数、进度和输出状态。</p>
+
+      <h2 id="zh-2">2. 通用操作</h2>
+      <ol>
+        <li>在目标分析标签页选择或输入数据目录。</li>
+        <li>等待文件列表加载完成。切换目录时旧文件选择会立即清空。</li>
+        <li>选择文件并调整参数。</li>
+        <li>点击"运行"。分析期间目录和文件控件不可修改。</li>
+        <li>观察进度。成功、超时和分析异常都会保留在当前标签页。</li>
+        <li>完成后点击"打开目标文件夹"查看结果。</li>
+      </ol>
+      <div class="note">
+        <b>引擎预热</b>：应用打开后，分析引擎（Python sidecar）会在后台自动预热约数秒到十几秒。预热期间窗口顶部会显示"引擎预热中，首次分析可能稍慢"的横幅，横幅消失即表示预热完成。在此期间发起分析不会出错，只是首次分析需要多等一会儿。
+      </div>
+      <p>文件列表加载失败时，列表下方会显示错误。请检查目录是否存在、格式是否正确，以及 sidecar 是否可启动。</p>
+
+      <h2 id="zh-3">3. GPC</h2>
+      <h3>操作</h3>
+      <ol>
+        <li>选择包含 <code>.rst</code> 或 GPC 仪器 Excel 导出文件（<code>.xls</code>/<code>.xlsx</code>）的数据目录。</li>
+        <li>输入输出文件名，默认值为当天日期 <code>YYYYMMDD</code>。</li>
+        <li>如只处理部分文件，启用"选择部分文件"后在列表中选择。</li>
+        <li>选择是否保存样品信息（CSV）、图片（PNG）和绘图数据（XLSX）。</li>
+        <li>已有同名输出时，确认后启用"确认覆盖"。</li>
+        <li>点击"运行"。</li>
+      </ol>
+      <h3>输出</h3>
+      <p>结果写入数据目录同级的 <code>GPC_output/</code>：</p>
+      <ul>
+        <li><code>{输出名}.png</code>：叠加色谱图（logMW–dw/dlogM 曲线，图例为样品名）</li>
+        <li><code>{输出名}.csv</code>：分子量汇总（Mp、Mn、Mw、Mz、Mz+1、Mv、PD）</li>
+        <li><code>{输出名}.xlsx</code>：绘图数据（启用时），每样品一个 sheet</li>
+      </ul>
+
+      <h2 id="zh-4">4. Mw</h2>
+      <h3>操作</h3>
+      <ol>
+        <li>选择包含 <code>.rst</code> 或 GPC 仪器 Excel 导出文件的数据目录和待分析文件。</li>
+        <li>在"区域设置"中选择或新增分子量分割位置。</li>
+        <li>在"画图设置"中调整柱状图、Mw 曲线、表格、颜色、线宽和字号。</li>
+        <li>点击"运行"。</li>
+      </ol>
+      <p>默认分割位置：</p>
+      <pre><code>0, 5000, 10000, 50000, 100000, 500000,
+1000000, 5000000, 10000000, 50000000</code></pre>
+      <h3>输出</h3>
+      <p>结果写入数据目录同级的 <code>Mw_output/</code>：每个 <code>.rst</code> 文件一张图（以文件名命名）；Excel 导出文件中的<b>每个样品</b>一张图（以样品名命名），x 轴为分子量（对数刻度），包含区间分布表与 Mn/Mw/PDI 统计表。</p>
+
+      <h2 id="zh-5">5. DSC</h2>
+      <h3>操作</h3>
+      <ol>
+        <li>选择包含 <code>.txt</code> 文件的数据目录和待分析文件。</li>
+        <li>选择是否保存分段数据、绘制分段曲线和循环对比图。</li>
+        <li>只有启用"保存分段数据"和"绘制循环对比图"时，保存循环对比图才会生效。</li>
+        <li>调整峰方向、居中、左右边界和绘图样式。</li>
+        <li>点击"运行"。</li>
+      </ol>
+      <p>桌面前端不会要求 Python 打开交互式图片窗口，DSC 的 <code>display_pic</code> 固定为 <code>false</code>。界面中被禁用的依赖选项也会以 <code>false</code> 提交。</p>
+      <h3>输出</h3>
+      <ul>
+        <li><code>DSC_Cycle/</code>：分段数据和循环对比结果</li>
+        <li><code>DSC_Pic/</code>：分段曲线图片</li>
+      </ul>
+      <p>两个目录位于所选数据目录的同级位置。</p>
+
+      <h2 id="zh-6">6. IR</h2>
+      <h3>操作</h3>
+      <ol>
+        <li>选择包含 <code>.dpt</code> 文件的数据目录。</li>
+        <li>选择一个或多个 DPT 文件。</li>
+        <li>单谱曲线默认使用红色，可继续调整颜色、透明背景、线宽、坐标轴和字号。</li>
+        <li>按需启用"绘制多样品叠加图"。启用后可以选择是否按峰归一化。</li>
+        <li>启用归一化后输入参考峰位，默认 <code>1450 cm⁻¹</code>。程序会在该峰位前后 <code>80 cm⁻¹</code> 内寻找最大吸光度，并将各样品参考峰统一到吸光度 <code>0.6</code>。</li>
+        <li>点击"运行"。</li>
+      </ol>
+      <h3>输出</h3>
+      <p>IR 输出位于应用可写数据根目录的 <code>IR_output/</code>：</p>
+      <pre><code>IR_output/
+├── individual/          单个样品谱图
+├── dpt_overlay.png      叠加谱图（启用叠加时生成）
+└── manifest.json        输入和输出清单</code></pre>
+
+      <h2 id="zh-7">7. 设置预设</h2>
+      <p>Mw、DSC 和 IR 分别保存自己的绘图预设，互不覆盖。每个模块可：</p>
+      <ul>
+        <li>从设置列表切换预设</li>
+        <li>输入名称保存当前设置</li>
+        <li>删除非默认预设</li>
+      </ul>
+      <p>GPC 不显示预设管理面板。</p>
+
+      <h2 id="zh-8">8. 清理输出</h2>
+      <p>"其他"标签页调用 <code>system.clean_output</code>。操作步骤：</p>
+      <ol>
+        <li>选择一个现有数据目录。</li>
+        <li>启用"清理文件夹"。</li>
+        <li>点击"执行清理"，并在弹出的确认框中再次确认。</li>
+      </ol>
+      <p>后端只会检查并重建已知输出目录。以下目录位于所选数据目录同级位置：</p>
+      <ul>
+        <li><code>Mw_output/</code></li>
+        <li><code>GPC_output/</code></li>
+        <li><code>DSC_Cycle/</code></li>
+        <li><code>DSC_Pic/</code></li>
+      </ul>
+      <p>IR 的 <code>IR_output/</code> 位于应用可写数据根目录。符号链接和其他目录不会被当作输出目录清理。</p>
+
+      <h2 id="zh-9">9. 输入格式</h2>
+      <h3>GPC / Mw：<code>.rst</code></h3>
+      <p>仪器（Cirrus/Waters 类）导出的文本格式，包含分子量平均值（<code>MW_Averages</code>）和切片表（<code>Slice_Table</code>）数据段。</p>
+      <h3>GPC / Mw：Excel 导出（<code>.xls</code> / <code>.xlsx</code>）</h3>
+      <p>GPC 仪器软件的 Excel 导出格式，程序自动识别，无需固定列数：</p>
+      <ul>
+        <li><b>数据表</b>：表头含 <code>LogM</code> 列，与以样品名命名的 <code>MMD</code>（dw/dlogM 分布）和 <code>Cumulative</code>（累积重量分数）列成对出现，如 <code>26-2613 (GPP-262-1#) MMD</code>。任意样品数、任意列数均可识别；缺失 MMD 或 Cumulative 列时会自动从另一列补算。</li>
+        <li><b>Results 汇总表</b>（可选）：含 <code>Mw (g/mol)</code>、<code>Mn (g/mol)</code>、<code>Mz (g/mol)</code>、<code>Mz1 (g/mol)</code>、<code>Mv (g/mol)</code>、<code>Mp (g/mol)</code>、<code>Mw / Mn</code> 列，样品名在第一列，千分位逗号自动去除。缺失时不影响画图。</li>
+      </ul>
+      <p>GPC 叠加图与 Mw 分布图的单位与 <code>.rst</code> 版本完全一致（logMW–dw/dlogM；Mw 图 x 轴为线性分子量的对数刻度）。</p>
+      <h3>DSC：<code>.txt</code></h3>
+      <p>文件应包含时间、温度、热流和方法信息，以便识别并分割循环。</p>
+      <h3>IR：<code>.dpt</code></h3>
+      <p>文件必须包含至少两行有限数值数据，每行由波数和吸光度组成。无效、NaN 或无限值数据会被拒绝或跳过。</p>
+
+      <h2 id="zh-10">10. 常见问题</h2>
+      <h3>文件列表为空</h3>
+      <ul>
+        <li>确认目录存在。</li>
+        <li>确认扩展名分别为 <code>.rst</code>、<code>.xls</code>、<code>.xlsx</code>、<code>.txt</code> 或 <code>.dpt</code>。</li>
+        <li>等待加载结束并查看列表下方错误。</li>
+      </ul>
+      <h3>首次分析较慢 / "引擎预热中"横幅</h3>
+      <p>引擎在应用打开后自动预热（加载绘图组件、构建字体缓存）。横幅消失后首次分析即可快速完成；同一次应用会话内后续分析不受影响。</p>
+      <h3>分析超时</h3>
+      <p>目录和系统请求约 30 秒超时，分析请求约 5 分钟超时。超时后应用会终止并重置 sidecar，下一次请求会启动新进程。</p>
+      <h3>输出已存在</h3>
+      <p>GPC 需要启用"确认覆盖"。其他模块按自身输出规则生成或替换目标目录。</p>
+      <h3>打不开输出目录</h3>
+      <p>确认目标目录已经生成且当前用户有访问权限；错误会显示在应用中。</p>
+
+      <h2 id="zh-11">11. 命令行</h2>
+      <p>PolyAnalyzer 同时提供批量分析命令行 <code>poly</code>：</p>
+      <pre><code>poly --help
+poly gpc --datadir ./datapath --output-name batch-001
+poly mw  --datadir ./datapath --ranges 0-50000,50000-100000
+poly dsc --datadir ./datapath
+poly clean --datadir ./datapath --yes</code></pre>
+      <p>完整说明见安装目录下的 <code>CLI_USAGE.md</code> 与 <code>CLI_USAGE_EN.md</code>。</p>
+    </div>
+
+    <!-- ============ English ============ -->
+    <div data-lang="en" hidden>
+      <h1>PolyAnalyzer Manual</h1>
+      <p class="muted">Version 2.4.0 · Polymer analysis desktop app (GPC / Mw / DSC / IR)</p>
+
+      <nav class="toc">
+        <div class="toc-title">Contents</div>
+        <ol>
+          <li><a href="#en-1">Overview</a></li>
+          <li><a href="#en-2">Common workflow</a></li>
+          <li><a href="#en-3">GPC</a></li>
+          <li><a href="#en-4">Mw</a></li>
+          <li><a href="#en-5">DSC</a></li>
+          <li><a href="#en-6">IR</a></li>
+          <li><a href="#en-7">Settings profiles</a></li>
+          <li><a href="#en-8">Clean outputs</a></li>
+          <li><a href="#en-9">Input formats</a></li>
+          <li><a href="#en-10">Troubleshooting</a></li>
+          <li><a href="#en-11">Command line</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="en-1">1. Overview</h2>
+      <p>PolyAnalyzer provides five tabs:</p>
+      <table>
+        <tr><th>Tab</th><th>Purpose</th><th>Input formats</th></tr>
+        <tr><td>GPC</td><td>GPC summary and overlaid chromatograms</td><td><code>.rst</code> / <code>.xls</code> / <code>.xlsx</code></td></tr>
+        <tr><td>Mw</td><td>Molecular-weight distribution and segment statistics</td><td><code>.rst</code> / <code>.xls</code> / <code>.xlsx</code></td></tr>
+        <tr><td>DSC</td><td>DSC segment and cycle analysis</td><td><code>.txt</code></td></tr>
+        <tr><td>IR</td><td>IR DPT single and overlay spectra</td><td><code>.dpt</code></td></tr>
+        <tr><td>Other</td><td>Clean known output directories</td><td>directory</td></tr>
+      </table>
+      <p>The language selector in the header switches between Chinese and English. Visited tabs keep their directory, file selection, parameters, progress and output state.</p>
+
+      <h2 id="en-2">2. Common workflow</h2>
+      <ol>
+        <li>Select or enter a data directory in the target analysis tab.</li>
+        <li>Wait for the file list to load. Previous selections are cleared when the directory changes.</li>
+        <li>Select files and adjust parameters.</li>
+        <li>Click "Run". Directory and file controls are locked during analysis.</li>
+        <li>Watch the progress. Success, timeout and errors are kept in the current tab.</li>
+        <li>Click "Open Output Folder" when finished.</li>
+      </ol>
+      <div class="note">
+        <b>Engine warmup</b>: after the app opens, the analysis engine (Python sidecar) warms up in the background for a few seconds. A banner "Engine warming up — the first analysis may take a moment…" appears at the top and disappears when the engine is ready. Starting an analysis during warmup is safe; the first run just takes a little longer.
+      </div>
+      <p>If the file list fails to load, an error appears below the list. Check that the directory exists, the formats are correct, and the sidecar can start.</p>
+
+      <h2 id="en-3">3. GPC</h2>
+      <h3>Workflow</h3>
+      <ol>
+        <li>Select a directory containing <code>.rst</code> files or GPC instrument Excel exports (<code>.xls</code>/<code>.xlsx</code>).</li>
+        <li>Enter an output name; it defaults to today's date <code>YYYYMMDD</code>.</li>
+        <li>To process only some files, enable "Select partial files" and pick them in the list.</li>
+        <li>Choose whether to save sample info (CSV), image (PNG) and plot data (XLSX).</li>
+        <li>If outputs with the same name exist, enable "Confirm overwrite".</li>
+        <li>Click "Run".</li>
+      </ol>
+      <h3>Outputs</h3>
+      <p>Results are written to <code>GPC_output/</code> next to the data directory:</p>
+      <ul>
+        <li><code>{output-name}.png</code> — overlaid chromatograms (logMW–dw/dlogM curves, legend = sample names)</li>
+        <li><code>{output-name}.csv</code> — molecular-weight summary (Mp, Mn, Mw, Mz, Mz+1, Mv, PD)</li>
+        <li><code>{output-name}.xlsx</code> — plot data (when enabled), one sheet per sample</li>
+      </ul>
+
+      <h2 id="en-4">4. Mw</h2>
+      <h3>Workflow</h3>
+      <ol>
+        <li>Select a directory containing <code>.rst</code> or GPC Excel export files, then the files to analyze.</li>
+        <li>Choose or add molecular-weight segment positions in "Region settings".</li>
+        <li>Adjust bars, Mw curve, tables, colors, line widths and font sizes in "Plot settings".</li>
+        <li>Click "Run".</li>
+      </ol>
+      <p>Default segment positions:</p>
+      <pre><code>0, 5000, 10000, 50000, 100000, 500000,
+1000000, 5000000, 10000000, 50000000</code></pre>
+      <h3>Outputs</h3>
+      <p>Results are written to <code>Mw_output/</code> next to the data directory: one figure per <code>.rst</code> file (named after the file), and <b>one figure per sample</b> for Excel exports (named after the sample). The x-axis is molecular weight on a log scale; the figure includes the segment table and the Mn/Mw/PDI stats table.</p>
+
+      <h2 id="en-5">5. DSC</h2>
+      <h3>Workflow</h3>
+      <ol>
+        <li>Select a directory containing <code>.txt</code> files and the files to analyze.</li>
+        <li>Choose whether to save segment data, plot segment curves and plot cycle comparisons.</li>
+        <li>Cycle comparison saving only takes effect when both "Save segment data" and "Plot cycle comparison" are enabled.</li>
+        <li>Adjust peak orientation, centering, left/right boundaries and plot styles.</li>
+        <li>Click "Run".</li>
+      </ol>
+      <p>The desktop frontend never asks Python to open interactive image windows; DSC's <code>display_pic</code> is always <code>false</code>. Disabled dependent options are also submitted as <code>false</code>.</p>
+      <h3>Outputs</h3>
+      <ul>
+        <li><code>DSC_Cycle/</code> — segment data and cycle comparison results</li>
+        <li><code>DSC_Pic/</code> — segment curve images</li>
+      </ul>
+      <p>Both directories sit next to the selected data directory.</p>
+
+      <h2 id="en-6">6. IR</h2>
+      <h3>Workflow</h3>
+      <ol>
+        <li>Select a directory containing <code>.dpt</code> files.</li>
+        <li>Select one or more DPT files.</li>
+        <li>Single-spectrum curves are red by default; colors, transparent background, line width, axes and font sizes can be adjusted.</li>
+        <li>Enable "Draw multi-sample overlay" if needed; optionally normalize by peak.</li>
+        <li>When normalization is enabled, enter a reference peak position (default <code>1450 cm⁻¹</code>). The program finds the maximum absorbance within ±<code>80 cm⁻¹</code> of that position and scales every sample's reference peak to absorbance <code>0.6</code>.</li>
+        <li>Click "Run".</li>
+      </ol>
+      <h3>Outputs</h3>
+      <p>IR outputs are written to <code>IR_output/</code> under the app's writable data root:</p>
+      <pre><code>IR_output/
+├── individual/          per-sample spectra
+├── dpt_overlay.png      overlay plot (when enabled)
+└── manifest.json        input/output manifest</code></pre>
+
+      <h2 id="en-7">7. Settings profiles</h2>
+      <p>Mw, DSC and IR keep separate plot presets that never overwrite each other. Each module can:</p>
+      <ul>
+        <li>switch presets from the settings list</li>
+        <li>save the current settings under a name</li>
+        <li>delete non-default presets</li>
+      </ul>
+      <p>GPC has no preset panel.</p>
+
+      <h2 id="en-8">8. Clean outputs</h2>
+      <p>The "Other" tab calls <code>system.clean_output</code>. Steps:</p>
+      <ol>
+        <li>Select an existing data directory.</li>
+        <li>Enable "Clean folders".</li>
+        <li>Click "Run clean" and confirm in the popup.</li>
+      </ol>
+      <p>The backend only recreates known output directories, located next to the selected data directory:</p>
+      <ul>
+        <li><code>Mw_output/</code></li>
+        <li><code>GPC_output/</code></li>
+        <li><code>DSC_Cycle/</code></li>
+        <li><code>DSC_Pic/</code></li>
+      </ul>
+      <p>IR's <code>IR_output/</code> lives under the app's writable data root. Symlinks and other directories are never treated as output directories.</p>
+
+      <h2 id="en-9">9. Input formats</h2>
+      <h3>GPC / Mw: <code>.rst</code></h3>
+      <p>Text exports from Cirrus/Waters-style instruments, containing the molecular-weight averages (<code>MW_Averages</code>) and the slice table (<code>Slice_Table</code>) sections.</p>
+      <h3>GPC / Mw: Excel exports (<code>.xls</code> / <code>.xlsx</code>)</h3>
+      <p>Excel exports from GPC instrument software are auto-detected — any number of columns is supported:</p>
+      <ul>
+        <li><b>Data sheet</b>: a header row containing <code>LogM</code> columns paired with sample-named <code>MMD</code> (dw/dlogM distribution) and <code>Cumulative</code> (cumulative weight fraction) value columns, e.g. <code>26-2613 (GPP-262-1#) MMD</code>. Missing MMD or Cumulative columns are derived from the other series automatically.</li>
+        <li><b>Results sheet</b> (optional): columns <code>Mw (g/mol)</code>, <code>Mn (g/mol)</code>, <code>Mz (g/mol)</code>, <code>Mz1 (g/mol)</code>, <code>Mv (g/mol)</code>, <code>Mp (g/mol)</code>, <code>Mw / Mn</code> with sample names in the first column; thousands separators are stripped automatically. Plotting still works without it.</li>
+      </ul>
+      <p>GPC overlay and Mw figures use exactly the same units as the <code>.rst</code> version (logMW–dw/dlogM; the Mw x-axis is linear molecular weight on a log scale).</p>
+      <h3>DSC: <code>.txt</code></h3>
+      <p>Files must contain time, temperature, heat-flow and method information so cycles can be identified and split.</p>
+      <h3>IR: <code>.dpt</code></h3>
+      <p>Files must contain at least two rows of finite numeric data, each row being wavenumber and absorbance. Invalid, NaN or infinite values are rejected or skipped.</p>
+
+      <h2 id="en-10">10. Troubleshooting</h2>
+      <h3>Empty file list</h3>
+      <ul>
+        <li>Check that the directory exists.</li>
+        <li>Check that extensions are <code>.rst</code>, <code>.xls</code>, <code>.xlsx</code>, <code>.txt</code> or <code>.dpt</code>.</li>
+        <li>Wait for loading to finish and read the error below the list.</li>
+      </ul>
+      <h3>First analysis is slow / "Engine warming up" banner</h3>
+      <p>The engine warms up automatically after the app opens (loading plotting components and building the font cache). Once the banner disappears, the first analysis runs quickly; later analyses in the same session are unaffected.</p>
+      <h3>Analysis timeout</h3>
+      <p>Directory and system requests time out after ~30 seconds, analysis requests after ~5 minutes. After a timeout the app kills and resets the sidecar; the next request starts a new process.</p>
+      <h3>Outputs already exist</h3>
+      <p>GPC requires "Confirm overwrite". Other modules generate or replace their target directories according to their own output rules.</p>
+      <h3>Cannot open the output folder</h3>
+      <p>Make sure the output directory was generated and the current user has access; errors are shown in the app.</p>
+
+      <h2 id="en-11">11. Command line</h2>
+      <p>PolyAnalyzer also ships the batch CLI <code>poly</code>:</p>
+      <pre><code>poly --help
+poly gpc --datadir ./datapath --output-name batch-001
+poly mw  --datadir ./datapath --ranges 0-50000,50000-100000
+poly dsc --datadir ./datapath
+poly clean --datadir ./datapath --yes</code></pre>
+      <p>See <code>CLI_USAGE.md</code> and <code>CLI_USAGE_EN.md</code> in the install directory for full details.</p>
+    </div>
+
+  </div>
+
+  <button id="back-to-top" aria-label="回到顶部 / Back to top" title="回到顶部 / Back to top">↑</button>
+</body>
+</html>

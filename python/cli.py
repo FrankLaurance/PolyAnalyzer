@@ -62,25 +62,42 @@ def _ensure_datadir(path: str) -> str:
     return datadir
 
 
-def _list_files(datadir: str, pattern: str) -> list[str]:
+def _list_files(datadir: str, patterns: str | tuple[str, ...]) -> list[str]:
+    pattern_tuple = (patterns,) if isinstance(patterns, str) else patterns
     return sorted(
-        os.path.basename(path)
-        for path in glob.glob(os.path.join(datadir, pattern))
-        if os.path.isfile(path) and not os.path.islink(path)
+        {
+            os.path.basename(path)
+            for pattern in pattern_tuple
+            for path in glob.glob(os.path.join(datadir, pattern))
+            if os.path.isfile(path) and not os.path.islink(path)
+        }
     )
 
 
-def _validate_selected_files(datadir: str, files: list[str] | None, pattern: str) -> list[str]:
-    selected = files or _list_files(datadir, pattern)
+_GPC_INPUT_PATTERNS: tuple[str, ...] = ("*.rst", "*.xls", "*.xlsx")
+
+
+def _validate_selected_files(
+    datadir: str, files: list[str] | None, patterns: str | tuple[str, ...]
+) -> list[str]:
+    pattern_tuple = (patterns,) if isinstance(patterns, str) else patterns
+    selected = files or _list_files(datadir, pattern_tuple)
     if not selected:
-        raise CliError(f"No input files matching {pattern} were found in {datadir}")
+        raise CliError(
+            f"No input files matching {' or '.join(pattern_tuple)} were found in {datadir}"
+        )
 
     validated: list[str] = []
     for name in selected:
         try:
             validate_basename(name, "input filename")
-            if not fnmatch.fnmatch(name.lower(), pattern.lower()):
-                raise ValueError(f"input filename must match {pattern}")
+            if not any(
+                fnmatch.fnmatch(name.lower(), pattern.lower())
+                for pattern in pattern_tuple
+            ):
+                raise ValueError(
+                    f"input filename must match {' or '.join(pattern_tuple)}"
+                )
             resolve_contained_file(datadir, name, "input filename")
         except (OSError, TypeError, ValueError) as exc:
             raise CliError(str(exc), EXIT_ARGUMENT_ERROR) from exc
@@ -285,7 +302,7 @@ def _run_gpc(args: argparse.Namespace) -> int:
     from analyzer.gpc import GPCAnalyzer
 
     datadir = _ensure_datadir(args.datadir)
-    selected_files = _validate_selected_files(datadir, _flatten_files(args.files), "*.rst")
+    selected_files = _validate_selected_files(datadir, _flatten_files(args.files), _GPC_INPUT_PATTERNS)
 
     analyzer = GPCAnalyzer(
         datadir=datadir,
@@ -320,7 +337,7 @@ def _run_mw(args: argparse.Namespace) -> int:
     from analyzer.mw import MolecularWeightAnalyzer
 
     datadir = _ensure_datadir(args.datadir)
-    selected_files = _validate_selected_files(datadir, _flatten_files(args.files), "*.rst")
+    selected_files = _validate_selected_files(datadir, _flatten_files(args.files), _GPC_INPUT_PATTERNS)
     setting_name = args.setting or DEFAULT_SETTING_NAME
     setting = _clean_setting("mw", _settings_manager("mw").load_setting(setting_name))
     segments = args.ranges or args.segments or setting.get(
@@ -599,9 +616,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command")
 
-    gpc = subparsers.add_parser("gpc", help="Run GPC analysis for .rst files.")
+    gpc = subparsers.add_parser("gpc", help="Run GPC analysis for .rst/.xls/.xlsx files.")
     _add_common_output_args(gpc)
-    gpc.add_argument("--datadir", required=True, help="Directory containing input .rst files.")
+    gpc.add_argument("--datadir", required=True, help="Directory containing input .rst/.xls/.xlsx files.")
     gpc.add_argument("--output-name", required=True, help="Output file name without extension.")
     _add_file_args(gpc)
     gpc.add_argument("--overwrite", action="store_true", help="Allow replacing existing output files.")
@@ -610,9 +627,9 @@ def build_parser() -> argparse.ArgumentParser:
     gpc.add_argument("--no-xlsx", dest="save_xlsx", action="store_false", default=True, help="Do not write XLSX plot data.")
     gpc.set_defaults(func=_run_gpc)
 
-    mw = subparsers.add_parser("mw", help="Run molecular-weight distribution analysis for .rst files.")
+    mw = subparsers.add_parser("mw", help="Run molecular-weight distribution analysis for .rst/.xls/.xlsx files.")
     _add_common_output_args(mw)
-    mw.add_argument("--datadir", required=True, help="Directory containing input .rst files.")
+    mw.add_argument("--datadir", required=True, help="Directory containing input .rst/.xls/.xlsx files.")
     _add_file_args(mw)
     mw.add_argument("--setting", help="Setting file name to load before applying CLI overrides.")
     segment_group = mw.add_mutually_exclusive_group()

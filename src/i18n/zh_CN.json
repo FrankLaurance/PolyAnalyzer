@@ -9,6 +9,8 @@
   "run": "运行",
   "open_folder": "打开目标文件夹",
   "help": "帮助",
+  "manual": "使用说明",
+  "engine_warming": "引擎预热中，首次分析可能稍慢，请稍候…",
   "settings": "设置",
   "complete": "完成！耗时{{time}}s",
 

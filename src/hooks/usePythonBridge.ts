@@ -32,6 +32,7 @@ interface ProgressParams {
   request_id?: number;
   progress: number;
   message: string;
+  warmup?: boolean;
 }
 
 export interface ProgressInfo {
@@ -40,6 +41,9 @@ export interface ProgressInfo {
   progress: number;
   message: string;
 }
+
+/** Sidecar engine warmup state shown as a global banner. */
+export type EngineStatus = "idle" | "warming" | "ready";
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -53,6 +57,7 @@ type SidecarChild = Awaited<ReturnType<Command<string>["spawn"]>>;
 
 const progressListeners = new Map<BridgeAnalyzer, Set<(progress: ProgressInfo) => void>>();
 const connectionListeners = new Set<(connected: boolean) => void>();
+const engineStatusListeners = new Set<(status: EngineStatus) => void>();
 const pendingRequests = new Map<number, PendingRequest>();
 
 let sidecarChild: SidecarChild | null = null;
@@ -60,6 +65,7 @@ let spawnPromise: Promise<void> | null = null;
 let sidecarGeneration = 0;
 let requestId = 0;
 let stdoutBuffer = "";
+let engineStatusSnapshot: EngineStatus = "idle";
 const requestQueue = createSerialQueue();
 const lastProgressSnapshots = new Map<BridgeAnalyzer, ProgressInfo>();
 
@@ -73,6 +79,11 @@ function emitConnection(connected: boolean) {
 function emitProgress(analyzer: BridgeAnalyzer, progress: ProgressInfo) {
   lastProgressSnapshots.set(analyzer, progress);
   progressListeners.get(analyzer)?.forEach((listener) => listener(progress));
+}
+
+function emitEngineStatus(status: EngineStatus) {
+  engineStatusSnapshot = status;
+  engineStatusListeners.forEach((listener) => listener(status));
 }
 
 function rejectPending(reason: Error) {
@@ -90,6 +101,7 @@ function clearSidecarState(generation: number, reason: Error) {
   spawnPromise = null;
   stdoutBuffer = "";
   emitConnection(false);
+  emitEngineStatus("idle");
   rejectPending(reason);
 }
 
@@ -125,6 +137,13 @@ function processLine(line: string) {
     if (msg.method !== "progress" || !msg.params) return;
 
     const params = msg.params;
+
+    // Warmup status notifications drive the global engine banner and never
+    // participate in per-request progress dispatch.
+    if (params.warmup === true) {
+      emitEngineStatus(params.progress >= 100 ? "ready" : "warming");
+      return;
+    }
     const matchedRequest = params.request_id === undefined
       ? undefined
       : pendingRequests.get(params.request_id);
@@ -283,6 +302,7 @@ export function usePythonBridge(analyzer: BridgeAnalyzer) {
   const [lastProgress, setLastProgress] = useState<ProgressInfo>(
     () => lastProgressSnapshots.get(analyzer) ?? { analyzer, progress: 0, message: "" },
   );
+  const [engineStatus, setEngineStatus] = useState<EngineStatus>(() => engineStatusSnapshot);
 
   useEffect(() => {
     const listeners = progressListeners.get(analyzer) ?? new Set();
@@ -292,11 +312,14 @@ export function usePythonBridge(analyzer: BridgeAnalyzer) {
       lastProgressSnapshots.get(analyzer) ?? { analyzer, progress: 0, message: "" },
     );
     connectionListeners.add(setIsConnected);
+    engineStatusListeners.add(setEngineStatus);
+    setEngineStatus(engineStatusSnapshot);
     return () => {
       const currentListeners = progressListeners.get(analyzer);
       currentListeners?.delete(setLastProgress);
       if (currentListeners?.size === 0) progressListeners.delete(analyzer);
       connectionListeners.delete(setIsConnected);
+      engineStatusListeners.delete(setEngineStatus);
     };
   }, [analyzer]);
 
@@ -305,5 +328,5 @@ export function usePythonBridge(analyzer: BridgeAnalyzer) {
     [analyzer],
   );
 
-  return { sendRequest, isConnected, lastProgress };
+  return { sendRequest, isConnected, lastProgress, engineStatus };
 }

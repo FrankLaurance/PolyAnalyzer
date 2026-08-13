@@ -6,7 +6,6 @@ All Streamlit dependencies have been removed; UI display is handled by the front
 """
 
 import os
-import glob
 import re
 import shutil
 import numpy as np
@@ -108,6 +107,10 @@ class GPCAnalyzer(BaseAnalyzer):
 
     def preprocess(self) -> None:
         """预处理数据文件，提取分子量和峰数据"""
+        if self.excel_samples is not None:
+            self._preprocess_excel()
+            return
+
         mw_start, mw_end, slice_table_start = self.preprocess_common()
 
         # 整理分子量数据
@@ -152,6 +155,33 @@ class GPCAnalyzer(BaseAnalyzer):
             raise ValueError("未找到有效的峰数据")
 
         self.peak_data[self.sample_name] = all_peaks
+
+    def _preprocess_excel(self) -> None:
+        """Excel 路径预处理 — 每个样品转为内部结构（与 .rst 同列序）。
+
+        GPC 图使用峰数组第 5、6 列（.rst 的 logMW / dw_dlogM），
+        Excel 的 LogM / MMD 单位一致，直接填入即可复用绘图与输出代码。
+        """
+        from .excel_reader import format_result
+
+        assert self.excel_samples is not None
+        for name, sample in self.excel_samples.items():
+            results = sample.results
+            self.mw_data.append(
+                [name] + [
+                    format_result(results.get(key))
+                    for key in ("Mp", "Mn", "Mw", "Mz", "Mz+1", "Mv", "PD")
+                ]
+            )
+            peak_array = np.zeros((len(sample.logm), GPC_Y_COLUMN_INDEX + 1))
+            peak_array[:, GPC_X_COLUMN_INDEX] = sample.logm
+            peak_array[:, GPC_Y_COLUMN_INDEX] = sample.mmd
+            self.peak_data[name] = [peak_array]
+
+        if not self.mw_data:
+            raise ValueError("Excel 文件中未找到样品数据")
+
+        self.peak_num = len(self.mw_data)
 
     # ------------------------------------------------------------------
     # Drawing
@@ -239,10 +269,7 @@ class GPCAnalyzer(BaseAnalyzer):
             bool: 成功返回 True，失败返回 False
         """
         if self.selected_file is None:
-            self.file_list = [
-                os.path.basename(i)
-                for i in glob.glob(os.path.join(self.data_path, "*.rst"))
-            ]
+            self.file_list = self.read_file_list()
         else:
             self.file_list = self.selected_file
 
