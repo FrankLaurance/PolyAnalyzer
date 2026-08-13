@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.2.1
+# PolyAnalyzer 2.4.0
 
 [中文](README.md)
 
@@ -8,10 +8,16 @@ PolyAnalyzer is a Tauri v2, React, and Python sidecar desktop application for po
 
 | Module | Input | Main outputs |
 |--------|-------|--------------|
-| GPC | `.rst` | Molecular-weight summary, chromatogram, and peak data |
-| Mw | `.rst` | Molecular-weight distribution plots and interval statistics |
+| GPC | `.rst` / `.xls` / `.xlsx` | Molecular-weight summary, chromatogram, and peak data |
+| Mw | `.rst` / `.xls` / `.xlsx` | Molecular-weight distribution plots and interval statistics |
 | DSC | `.txt` | Segmented data, segment plots, and cycle comparisons |
 | IR | `.dpt` | Red individual spectra, optional peak-normalized overlay, and manifest |
+
+v2.4.0 highlights:
+
+- GPC/Mw accept instrument Excel exports (`.xls`/`.xlsx`), auto-detecting `LogM`/`MMD`/`Cumulative` column groups and the Results summary sheet for any number of samples; units match the `.rst` version
+- Engine warmup banner: the plotting engine warms up in the background after launch, with a global notice that disappears when ready
+- Built-in bilingual "Manual" window (opened from the Help panel, with a jumpable table of contents)
 
 The React frontend communicates with the Python sidecar over stdin/stdout JSON-RPC. Progress notifications include an analyzer and request ID so tab activity remains isolated.
 
@@ -68,7 +74,7 @@ pnpm tauri build
 ## Version Synchronization
 
 ```bash
-./release.sh 2.2.1
+./release.sh 2.4.0
 ```
 
 The script synchronizes version fields only. It does not create a commit, Git tag, or GitHub Release. It updates:
@@ -113,7 +119,7 @@ python/tests/           Python unittest suite
 release.sh              Version synchronization script
 ```
 
-See [MANUAL.md](MANUAL.md) for user instructions and [DEV_TOOLS.md](DEV_TOOLS.md) for development setup.
+See the in-app "Manual" window (source: [public/manual.html](public/manual.html)) for user instructions and [DEV_TOOLS.md](DEV_TOOLS.md) for development setup.
 
 ## License
 

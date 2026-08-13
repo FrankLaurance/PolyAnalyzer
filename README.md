@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.2.1
+# PolyAnalyzer 2.4.0
 
 [English](README_EN.md)
 
@@ -8,10 +8,16 @@ PolyAnalyzer 是一个基于 Tauri v2、React 和 Python sidecar 的桌面分析
 
 | 模块 | 输入 | 主要输出 |
 |------|------|----------|
-| GPC | `.rst` | 分子量汇总、色谱图和峰数据 |
-| Mw | `.rst` | 分子量分布图和区间统计 |
+| GPC | `.rst` / `.xls` / `.xlsx` | 分子量汇总、色谱图和峰数据 |
+| Mw | `.rst` / `.xls` / `.xlsx` | 分子量分布图和区间统计 |
 | DSC | `.txt` | 分段数据、分段曲线和循环对比图 |
 | IR | `.dpt` | 红色单谱图、可选峰归一化叠加图和 manifest |
+
+v2.4.0 亮点：
+
+- GPC/Mw 支持仪器 Excel 导出（`.xls`/`.xlsx`），自动识别 `LogM`/`MMD`/`Cumulative` 列组与 Results 汇总表，任意样品数均可；单位与 `.rst` 版本一致
+- 引擎预热横幅：打开应用后后台预热绘图引擎，预热期间全局提示、完成后自动消失
+- 内置中英双语"使用说明"窗口（帮助区打开，含目录跳转）
 
 前端通过 stdin/stdout JSON-RPC 调用 Python sidecar。分析进度包含 analyzer 和 request ID，避免多个标签页之间互相覆盖。
 
@@ -68,7 +74,7 @@ pnpm tauri build
 ## 版本同步
 
 ```bash
-./release.sh 2.2.1
+./release.sh 2.4.0
 ```
 
 脚本只同步版本字段，不创建 commit、Git tag 或 GitHub Release。它会更新：
@@ -113,7 +119,7 @@ python/tests/           Python unittest
 release.sh              版本同步脚本
 ```
 
-用户操作说明见 [MANUAL.md](MANUAL.md)，开发依赖说明见 [DEV_TOOLS.md](DEV_TOOLS.md)。
+用户操作说明见应用内"使用说明"窗口（源文件 [public/manual.html](public/manual.html)），开发依赖说明见 [DEV_TOOLS.md](DEV_TOOLS.md)。
 
 ## License
 
