@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.4.0
+# PolyAnalyzer 2.4.1
 
 [English](README_EN.md)
 
@@ -13,7 +13,7 @@ PolyAnalyzer 是一个基于 Tauri v2、React 和 Python sidecar 的桌面分析
 | DSC | `.txt` | 分段数据、分段曲线和循环对比图 |
 | IR | `.dpt` | 红色单谱图、可选峰归一化叠加图和 manifest |
 
-v2.4.0 亮点：
+v2.4.1 亮点：
 
 - GPC/Mw 支持仪器 Excel 导出（`.xls`/`.xlsx`），自动识别 `LogM`/`MMD`/`Cumulative` 列组与 Results 汇总表，任意样品数均可；单位与 `.rst` 版本一致
 - 引擎预热横幅：打开应用后后台预热绘图引擎，预热期间全局提示、完成后自动消失
@@ -74,7 +74,7 @@ pnpm tauri build
 ## 版本同步
 
 ```bash
-./release.sh 2.4.0
+./release.sh 2.4.1
 ```
 
 脚本只同步版本字段，不创建 commit、Git tag 或 GitHub Release。它会更新：

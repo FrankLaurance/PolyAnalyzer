@@ -198,9 +198,9 @@ class GpcExcelAnalyzerTests(unittest.TestCase):
         self.assertIn("26-2612 (GPP-262-2#)", csv_text)
         self.assertIn("503600", csv_text)
 
-        xlsx = pd.ExcelFile(outdir / "excel-out.xlsx")
-        self.assertIn("26-2613 (GPP-262-1#)", xlsx.sheet_names)
-        self.assertIn("26-2612 (GPP-262-2#)", xlsx.sheet_names)
+        with pd.ExcelFile(outdir / "excel-out.xlsx") as xlsx:
+            self.assertIn("26-2613 (GPP-262-1#)", xlsx.sheet_names)
+            self.assertIn("26-2612 (GPP-262-2#)", xlsx.sheet_names)
 
     def test_mw_analyzer_emits_one_figure_per_sample(self) -> None:
         analyzer = mw.MolecularWeightAnalyzer(

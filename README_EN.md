@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.4.0
+# PolyAnalyzer 2.4.1
 
 [中文](README.md)
 
@@ -13,7 +13,7 @@ PolyAnalyzer is a Tauri v2, React, and Python sidecar desktop application for po
 | DSC | `.txt` | Segmented data, segment plots, and cycle comparisons |
 | IR | `.dpt` | Red individual spectra, optional peak-normalized overlay, and manifest |
 
-v2.4.0 highlights:
+v2.4.1 highlights:
 
 - GPC/Mw accept instrument Excel exports (`.xls`/`.xlsx`), auto-detecting `LogM`/`MMD`/`Cumulative` column groups and the Results summary sheet for any number of samples; units match the `.rst` version
 - Engine warmup banner: the plotting engine warms up in the background after launch, with a global notice that disappears when ready
@@ -74,7 +74,7 @@ pnpm tauri build
 ## Version Synchronization
 
 ```bash
-./release.sh 2.4.0
+./release.sh 2.4.1
 ```
 
 The script synchronizes version fields only. It does not create a commit, Git tag, or GitHub Release. It updates:
