@@ -34,9 +34,6 @@ INTERNAL_ERROR = -32603
 
 MethodHandler = Callable[[dict[str, Any]], Any]
 
-# Root directory for analyzers (same as BaseAnalyzer.rootdir)
-_ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 class JsonRpcError(Exception):
     """JSON-RPC error with code and optional data."""
@@ -193,7 +190,6 @@ def _gpc_analyze(params: dict[str, Any]) -> Any:
         output_filename=output_filename,
         save_file=params.get("save_file", True),
         save_picture=params.get("save_picture", True),
-        display_mode=params.get("display_mode", True),
         save_figure_file_gpc=params.get("save_figure_file_gpc", True),
         progress_callback=_make_progress_callback(params, "gpc"),
     )
@@ -240,7 +236,6 @@ def _mw_analyze(params: dict[str, Any]) -> Any:
         datadir=datadir,
         save_file=params.get("save_file", True),
         save_picture=params.get("save_picture", True),
-        display_picture=params.get("display_picture", False),
         bar_color=params.get("bar_color", DEFAULT_BAR_COLOR),
         mw_color=params.get("mw_color", DEFAULT_MW_COLOR),
         bar_width=params.get("bar_width", 1.2),
@@ -296,7 +291,6 @@ def _dsc_analyze(params: dict[str, Any]) -> Any:
         save_seg_mode=params.get("save_seg_mode", True),
         draw_seg_mode=params.get("draw_seg_mode", True),
         draw_cycle=params.get("draw_cycle", True),
-        display_pic=params.get("display_pic", True),
         save_cycle_pic=params.get("save_cycle_pic", True),
         peaks_upward=params.get("peaks_upward", False),
         center_peak=params.get("center_peak", False),
@@ -459,7 +453,11 @@ def _settings_delete(params: dict[str, Any]) -> Any:
 
 def _settings_list(params: dict[str, Any]) -> Any:
     mgr = _get_settings_manager(params)
-    mgr.load_setting()
+    try:
+        mgr.load_setting()
+    except ValueError:
+        # 默认 Profile 损坏时保留原文件并继续列出其余 Profile。
+        logger.warning("默认 Analysis Profile 损坏，保留原文件并继续列出")
     return {"settings": mgr.list_settings()}
 
 
@@ -475,7 +473,9 @@ def _system_clean_output(params: dict[str, Any]) -> Any:
     if not isinstance(datadir, str) or not os.path.isdir(datadir):
         raise JsonRpcError(INVALID_PARAMS, "datadir must be an existing directory")
 
-    base = os.path.dirname(os.path.realpath(datadir))
+    # 与 BaseAnalyzer 一致使用 abspath（不解析符号链接），
+    # 保证清理目标与分析器实际写入的兄弟目录相同。
+    base = os.path.dirname(os.path.abspath(datadir))
     output_dirs = list(dict.fromkeys([
         os.path.join(base, "Mw_output"),
         os.path.join(base, "GPC_output"),

@@ -309,7 +309,6 @@ def _run_gpc(args: argparse.Namespace) -> int:
         output_filename=args.output_name,
         save_file=args.save_csv,
         save_picture=args.save_image,
-        display_mode=False,
         save_figure_file_gpc=args.save_xlsx,
         progress_callback=_progress_callback(args),
     )
@@ -349,7 +348,6 @@ def _run_mw(args: argparse.Namespace) -> int:
         datadir=datadir,
         save_file=True,
         save_picture=args.save_image,
-        display_picture=False,
         bar_color=_resolve_setting_value(args, "bar_color", setting, "bar_color", DEFAULT_BAR_COLOR),
         mw_color=_resolve_setting_value(args, "mw_color", setting, "mw_color", DEFAULT_MW_COLOR),
         bar_width=_resolve_setting_value(args, "bar_width", setting, "bar_width", 1.2),
@@ -398,7 +396,6 @@ def _run_dsc(args: argparse.Namespace) -> int:
         save_seg_mode=args.save_segment_data,
         draw_seg_mode=args.draw_segment_plots,
         draw_cycle=args.draw_cycle,
-        display_pic=False,
         save_cycle_pic=args.save_cycle_image,
         peaks_upward=args.peaks_upward,
         center_peak=args.center_peak,
@@ -488,7 +485,9 @@ def _run_clean(args: argparse.Namespace) -> int:
     if not args.yes:
         raise CliError("Refusing to clean output directories without --yes", EXIT_ARGUMENT_ERROR)
 
-    base = os.path.dirname(datadir)
+    # 与 BaseAnalyzer 一致使用 abspath（不解析符号链接），保证清理目标与
+    # 分析器实际写入的兄弟目录相同。
+    base = os.path.dirname(os.path.abspath(datadir))
     output_dirs = [
         os.path.join(base, "Mw_output"),
         os.path.join(base, "GPC_output"),

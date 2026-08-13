@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.4.1
+# PolyAnalyzer 2.4.2
 
 [English](README_EN.md)
 
@@ -18,6 +18,16 @@ v2.4.1 亮点：
 - GPC/Mw 支持仪器 Excel 导出（`.xls`/`.xlsx`），自动识别 `LogM`/`MMD`/`Cumulative` 列组与 Results 汇总表，任意样品数均可；单位与 `.rst` 版本一致
 - 引擎预热横幅：打开应用后后台预热绘图引擎，预热期间全局提示、完成后自动消失
 - 内置中英双语"使用说明"窗口（帮助区打开，含目录跳转）
+
+v2.4.2 修复：
+
+- GPC 多文件分析：汇总 CSV 覆盖所有输入文件（此前只保留最后一个文件的数据）
+- Mw 区间分布表：补齐缺失的最后一个区间，标签与百分比对齐
+- Mw Analysis Profile：保存与切换时正确携带分段位置（segmentpos）
+- 使用说明窗口：语言切换可双向往返
+- 损坏的 Analysis Profile 保留原文件并报错，不再静默覆盖默认 Profile；设置文件写入改为原子操作
+- 清理输出与符号链接数据目录口径一致，不再误删真实路径下的输出
+- 修正 Mw 统计表多样品取值、DSC 调色板与 GPC 统一、日志文件统一命名
 
 前端通过 stdin/stdout JSON-RPC 调用 Python sidecar。分析进度包含 analyzer 和 request ID，避免多个标签页之间互相覆盖。
 
@@ -74,7 +84,7 @@ pnpm tauri build
 ## 版本同步
 
 ```bash
-./release.sh 2.4.1
+./release.sh 2.4.2
 ```
 
 脚本只同步版本字段，不创建 commit、Git tag 或 GitHub Release。它会更新：

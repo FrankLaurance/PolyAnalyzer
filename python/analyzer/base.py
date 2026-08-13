@@ -8,10 +8,10 @@ All streamlit dependencies have been removed; UI feedback is handled via callbac
 import os
 import glob
 import json
+import copy
 import logging
 import platform
 import shutil
-import subprocess
 import tempfile
 import uuid
 import numpy as np
@@ -176,7 +176,7 @@ os.environ["MPLBACKEND"] = "Agg"
 # ---------------------------------------------------------------------------
 # Constants — default settings
 # ---------------------------------------------------------------------------
-APP_VERSION: str = "2.4.1"
+APP_VERSION: str = "2.4.2"
 DEFAULT_BAR_COLOR: str = "#002FA7"
 DEFAULT_MW_COLOR: str = "#FF6A07"
 DEFAULT_SETTING_NAME: str = "defaultSetting.ini"
@@ -247,7 +247,7 @@ class Logger:
             os.makedirs(log_dir, exist_ok=True)
 
             log_file = os.path.join(
-                log_dir, f"gpc_{datetime.now().strftime('%Y%m%d')}.log"
+                log_dir, f"polyanalyzer_{datetime.now().strftime('%Y%m%d')}.log"
             )
             file_handler = logging.FileHandler(log_file, encoding="utf-8")
             file_handler.setLevel(logging.DEBUG)
@@ -404,24 +404,36 @@ class SettingsManager:
         )
 
     def load_setting(self, setting_name: Optional[str] = None) -> Dict[str, Any]:
+        """读取设置文件。
+
+        缺失的默认 Profile 会按出厂默认值创建；缺失的自定义 Profile 抛出
+        ``FileNotFoundError``；损坏或不可读的 Profile 保留原文件并抛出
+        ``ValueError``，绝不静默重置或覆盖任何文件。
+        """
         name = setting_name if setting_name else self.setting_name
         setting_path = self.get_setting_path(name)
 
         if not os.path.exists(setting_path):
-            return self.create_default_setting()
+            if name == self.setting_name:
+                return self.create_default_setting()
+            raise FileNotFoundError(f"设置文件不存在: {name}")
 
         try:
             with open(setting_path, "r", encoding="utf-8") as f:
                 content = f.read().strip()
-                try:
-                    setting = json.loads(content)
-                except json.JSONDecodeError:
-                    import ast
-                    setting = ast.literal_eval(content)
+            if not content:
+                raise ValueError("设置文件为空")
+            try:
+                setting = json.loads(content)
+            except json.JSONDecodeError:
+                import ast
+                setting = ast.literal_eval(content)
+            if not isinstance(setting, dict):
+                raise ValueError("设置内容不是对象")
             return self._normalize_setting_keys(setting)
         except Exception as e:
-            logger.warning(f"读取设置文件失败: {e}，使用默认设置")
-            return self.create_default_setting()
+            logger.error(f"读取设置文件失败: {name}: {e}，保留原文件")
+            raise ValueError(f"设置文件损坏，已保留原文件: {name}") from e
 
     def _normalize_setting_keys(self, setting: Dict[str, Any]) -> Dict[str, Any]:
         normalized: Dict[str, Any] = {}
@@ -458,19 +470,34 @@ class SettingsManager:
         return normalized
 
     def _get_default_value(self, key: str) -> Any:
-        return self.default_content.get(key)
+        # 返回深拷贝，防止调用方原地修改共享的默认值（如 segmentpos 列表）。
+        return copy.deepcopy(self.default_content.get(key))
 
     def create_default_setting(self) -> Dict[str, Any]:
-        self.save_setting(self.default_content, self.setting_name)
-        return self.default_content
+        default = copy.deepcopy(self.default_content)
+        self.save_setting(default, self.setting_name)
+        return default
 
     def save_setting(self, setting: Dict[str, Any], name: Optional[str] = None) -> None:
         filename = name if name else self.setting_name
         setting_path = self.get_setting_path(filename)
+        parent_dir = os.path.dirname(setting_path)
+        os.makedirs(parent_dir, exist_ok=True)
+        # 原子写：先写同目录临时文件，再 os.replace，避免进程中断留下半截 JSON。
+        tmp_fd, tmp_path = tempfile.mkstemp(
+            prefix=".setting-", suffix=".tmp", dir=parent_dir
+        )
         try:
-            with open(setting_path, "w", encoding="utf-8") as f:
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
                 json.dump(setting, f, indent=2, ensure_ascii=False)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, setting_path)
         except Exception as e:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
             logger.error(f"保存设置失败: {e}")
             raise
 
@@ -531,22 +558,6 @@ class BaseAnalyzer:
         # 集成日志器和验证器
         self.logger: Logger = logger
         self.validator: DataValidator = DataValidator(self.logger)
-
-    # -- folder operations -------------------------------------------------
-
-    def open_folder(self, path: str) -> None:
-        """跨平台打开文件夹"""
-        try:
-            if platform.system() == "Windows":
-                os.startfile(path)
-            elif platform.system() == "Darwin":
-                subprocess.run(["open", path])
-            elif platform.system() == "Linux":
-                subprocess.run(["xdg-open", path])
-            else:
-                self.logger.warning("不支持的操作系统")
-        except Exception as e:
-            self.logger.error(f"无法打开文件夹: {e}")
 
     # -- reset / clear -----------------------------------------------------
 

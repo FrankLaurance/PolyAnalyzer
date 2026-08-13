@@ -111,7 +111,6 @@ export default function DscPanel() {
         save_seg_mode: saveSegmentData,
         draw_seg_mode: drawSegmentCurve,
         draw_cycle: drawCycle,
-        display_pic: false,
         save_cycle_pic: drawCycle && saveComparison,
         peaks_upward: peaksUpward,
         center_peak: centerPeak,
@@ -132,7 +131,6 @@ export default function DscPanel() {
       setResult("dsc", {
         success: true,
         message: "DSC analysis complete",
-        data: result,
       });
       message.success(t("complete", { time: elapsed }));
     } catch (err) {

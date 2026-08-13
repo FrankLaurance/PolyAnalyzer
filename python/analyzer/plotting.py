@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import logging
 import threading
-import time
 from typing import Any
 
 _PLOT_LOCK = threading.Lock()
 _PLOT_MODULE: Any | None = None
-_WARMUP_STARTED = False
 
 
 def configure_plotting() -> Any:
@@ -48,23 +46,3 @@ def warm_plotting(logger: logging.Logger | None = None) -> None:
     except Exception as exc:
         if logger:
             logger.warning("Plot engine warmup failed: %s", exc)
-
-
-def warm_plotting_async(logger: logging.Logger | None = None, delay: float = 0.0) -> None:
-    """Start one background matplotlib warmup for the sidecar process."""
-    global _WARMUP_STARTED
-    if _WARMUP_STARTED:
-        return
-    _WARMUP_STARTED = True
-
-    def target() -> None:
-        if delay > 0:
-            time.sleep(delay)
-        warm_plotting(logger)
-
-    thread = threading.Thread(
-        target=target,
-        name="plot-engine-warmup",
-        daemon=True,
-    )
-    thread.start()

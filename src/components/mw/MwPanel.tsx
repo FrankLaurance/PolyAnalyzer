@@ -67,6 +67,12 @@ export default function MwPanel() {
     }
   }, [analyzer.running, lastProgress, setProgress]);
 
+  // 分段位置是 Mw Analysis Profile 的一部分：变更时同步进 store，
+  // 保存/切换 Profile 才能带着 segmentpos 一起走。
+  useEffect(() => {
+    updateAnalyzerSettings("mw", { segmentpos: selectedPositions });
+  }, [selectedPositions, updateAnalyzerSettings]);
+
   useEffect(() => {
     sendRequest("system.get_default_datapath", {})
       .then((res) => {
@@ -119,7 +125,6 @@ export default function MwPanel() {
         datadir: folderPath,
         selected_files: selectedFiles,
         save_picture: saveImage,
-        display_picture: false,
         segmentpos: selectedPositions,
         bar_color: analyzerSettings.barColor,
         mw_color: analyzerSettings.mwColor,
@@ -140,7 +145,6 @@ export default function MwPanel() {
       setResult("mw", {
         success: true,
         message: "Mw analysis complete",
-        data: result,
       });
       message.success(t("complete", { time: elapsed }));
     } catch (err) {
@@ -420,6 +424,14 @@ export default function MwPanel() {
                 onSwitch={(name) => {
                   setCurrentSetting(name);
                   loadSettings("mw", name);
+                  const saved = useSettingsStore.getState().savedSettings.mw[name];
+                  if (saved?.segmentpos?.length) {
+                    const positions = [...saved.segmentpos].sort((a, b) => a - b);
+                    setSelectedPositions(positions);
+                    setAllPositions((prev) =>
+                      [...new Set([...prev, ...positions])].sort((a, b) => a - b),
+                    );
+                  }
                 }}
                 onSave={(name) => {
                   setCurrentSetting(name);

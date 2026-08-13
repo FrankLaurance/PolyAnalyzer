@@ -138,6 +138,40 @@ class ApiFilesystemTests(unittest.TestCase):
             self.assertEqual([], list(ir_output.iterdir()))
             self.assertEqual("keep", (unrelated / "keep.txt").read_text(encoding="utf-8"))
 
+    def test_clean_output_targets_analyzers_abspath_siblings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            sub = root / "sub"
+            sub.mkdir()
+            real_data = sub / "real-data"
+            real_data.mkdir()
+            link = root / "data-link"
+            try:
+                link.symlink_to(real_data, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest("symlinks not supported on this platform")
+
+            # 分析器写入 abspath(链接) 的兄弟目录
+            correct = root / "Mw_output"
+            correct.mkdir()
+            (correct / "old.txt").write_text("old", encoding="utf-8")
+            # 旧实现用 realpath 会误删的目录
+            wrong = sub / "Mw_output"
+            wrong.mkdir()
+            (wrong / "keep.txt").write_text("keep", encoding="utf-8")
+            app_data = root / "app-data"
+
+            with patch.object(api, "get_install_dir", return_value=str(app_data)):
+                result = api._system_clean_output({
+                    "datadir": str(link),
+                    "confirm": True,
+                })
+
+            self.assertTrue(correct.is_dir())
+            self.assertEqual([], list(correct.iterdir()))
+            self.assertEqual("keep", (wrong / "keep.txt").read_text(encoding="utf-8"))
+            self.assertNotIn(str(wrong.resolve()), {str(Path(p).resolve()) for p in result["cleaned"]})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -182,7 +182,7 @@ class GpcExcelAnalyzerTests(unittest.TestCase):
     def test_gpc_analyzer_outputs_overlay_csv_and_per_sample_sheets(self) -> None:
         analyzer = gpc.GPCAnalyzer(
             str(self.datapath), "excel-out",
-            save_file=True, save_picture=True, display_mode=False,
+            save_file=True, save_picture=True,
         )
         analyzer.selected_file = ["gpc-export.xlsx"]
 
@@ -215,6 +215,27 @@ class GpcExcelAnalyzerTests(unittest.TestCase):
             png = outdir / f"{name}.png"
             self.assertTrue(png.is_file(), f"missing figure for {name}")
             self.assertGreater(png.stat().st_size, 0)
+
+    def test_gpc_summary_csv_accumulates_all_input_files(self) -> None:
+        """多文件分析时汇总 CSV 必须覆盖每个输入文件，而不是只留最后一个。"""
+        second = self.datapath / "gpc-export-2.xlsx"
+        _make_workbook(second, extra_sample=True)
+
+        analyzer = gpc.GPCAnalyzer(
+            str(self.datapath), "multi-out",
+            save_file=True, save_picture=False,
+            save_figure_file_gpc=False,
+        )
+        analyzer.selected_file = ["gpc-export.xlsx", "gpc-export-2.xlsx"]
+
+        self.assertTrue(analyzer.run())
+
+        csv_text = (self.tmp_path / "GPC_output" / "multi-out.csv").read_text(encoding="utf-8")
+        data_rows = csv_text.strip().splitlines()[1:]
+        self.assertEqual(5, len(data_rows), f"expected 5 sample rows, got:\n{csv_text}")
+        self.assertIn("26-2611 (GPP-262-3#)", csv_text)
+        self.assertIn("520600", csv_text)   # 第一个文件的样品仍在
+        self.assertIn("919000", csv_text)   # 第二个文件的第三个样品仍在
 
 
 class GpcExcelListingTests(unittest.TestCase):

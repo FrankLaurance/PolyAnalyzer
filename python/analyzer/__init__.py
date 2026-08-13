@@ -37,23 +37,6 @@ from .base import (
     logger,
 )
 
-
-def __getattr__(name: str):
-    """Lazily import analyzer classes so lightweight commands stay fast."""
-    if name == "GPCAnalyzer":
-        from .gpc import GPCAnalyzer
-        return GPCAnalyzer
-    if name == "DSCAnalyzer":
-        from .dsc import DSCAnalyzer
-        return DSCAnalyzer
-    if name == "MolecularWeightAnalyzer":
-        from .mw import MolecularWeightAnalyzer
-        return MolecularWeightAnalyzer
-    if name == "IRAnalyzer":
-        from .ir import IRAnalyzer
-        return IRAnalyzer
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
 __all__ = [
     "APP_VERSION",
     "DEFAULT_BAR_COLOR",
@@ -85,9 +68,5 @@ __all__ = [
     "DataValidator",
     "SettingsManager",
     "BaseAnalyzer",
-    "DSCAnalyzer",
-    "MolecularWeightAnalyzer",
-    "IRAnalyzer",
     "logger",
-    "GPCAnalyzer",
 ]

@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.4.1
+# PolyAnalyzer 2.4.2
 
 [中文](README.md)
 
@@ -18,6 +18,16 @@ v2.4.1 highlights:
 - GPC/Mw accept instrument Excel exports (`.xls`/`.xlsx`), auto-detecting `LogM`/`MMD`/`Cumulative` column groups and the Results summary sheet for any number of samples; units match the `.rst` version
 - Engine warmup banner: the plotting engine warms up in the background after launch, with a global notice that disappears when ready
 - Built-in bilingual "Manual" window (opened from the Help panel, with a jumpable table of contents)
+
+v2.4.2 fixes:
+
+- GPC multi-file analysis: the summary CSV now covers every input file (previously only the last file's data was kept)
+- Mw interval distribution table: the missing last interval is restored, and labels align with their percentages
+- Mw Analysis Profiles: segment positions (segmentpos) are saved and restored when switching profiles
+- Manual window: the language toggle now switches back and forth
+- Corrupted Analysis Profiles are preserved and reported instead of silently overwriting the default profile; setting writes are now atomic
+- Output cleanup now targets the same directories as the analyzers when the data directory is a symlink
+- Fixed Mw stats-table values for multiple samples, unified the DSC palette with GPC, and standardized log-file naming
 
 The React frontend communicates with the Python sidecar over stdin/stdout JSON-RPC. Progress notifications include an analyzer and request ID so tab activity remains isolated.
 
@@ -74,7 +84,7 @@ pnpm tauri build
 ## Version Synchronization
 
 ```bash
-./release.sh 2.4.1
+./release.sh 2.4.2
 ```
 
 The script synchronizes version fields only. It does not create a commit, Git tag, or GitHub Release. It updates:

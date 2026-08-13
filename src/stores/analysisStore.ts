@@ -5,7 +5,6 @@ export type AnalyzerType = "gpc" | "mw" | "dsc" | "ir" | "other";
 interface AnalysisResult {
   success: boolean;
   message: string;
-  data?: unknown;
   elapsedTime?: number;
 }
 

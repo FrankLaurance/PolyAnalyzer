@@ -1,11 +1,7 @@
 {
   "app_title": "Polymer Analyzer",
-  "language": "语言",
-  "save": "保存",
   "cancel": "取消",
   "confirm": "确认",
-  "delete": "删除",
-  "add": "添加",
   "run": "运行",
   "open_folder": "打开目标文件夹",
   "help": "帮助",
@@ -23,16 +19,11 @@
   "save_segment_data": "保存分段数据",
   "draw_segment_data": "绘制分段曲线",
   "draw_cycle": "绘制循环对比图",
-  "display_cycle": "显示对比图",
   "save_cycle": "保存对比图",
   "peaks_upward": "峰始终向上",
   "center_peak": "峰居中",
-  "fit_segment_data": "拟合各片段数据",
-  "fit_segment_data_ml": "拟合各片段数据（机器学习）",
-  "test_mode": "测试模式",
   "left_boundary": "左边界/min",
   "right_boundary": "右边界/min",
-  "peak_prominence": "峰突出程度",
   "select_at_least_one": "至少选择一个项目",
 
   "data_folder": "数据文件夹",
@@ -69,7 +60,6 @@
   "add_region": "添加",
 
   "save_image": "保存图像",
-  "display_image": "显示图片",
   "save_sample_info": "保存样品信息",
   "save_plot_data": "保存画图数据",
   "ir_dpt_files": "DPT 文件列表",
@@ -84,8 +74,6 @@
   "clean_folder": "清理文件夹",
   "run_clean": "执行清理",
   "clean_success": "清理完成",
-  "unsupported_os": "不支持的操作系统",
-  "cannot_open_folder": "无法打开文件夹: {{path}}",
 
   "contact_info": "PolyAnalyzer - 高分子分析工具"
 }

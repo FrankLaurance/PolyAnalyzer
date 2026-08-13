@@ -1,11 +1,7 @@
 {
   "app_title": "Polymer Analyzer",
-  "language": "Language",
-  "save": "Save",
   "cancel": "Cancel",
   "confirm": "Confirm",
-  "delete": "Delete",
-  "add": "Add",
   "run": "Run",
   "open_folder": "Open Output Folder",
   "help": "Help",
@@ -23,16 +19,11 @@
   "save_segment_data": "Save Segment Data",
   "draw_segment_data": "Draw Segment Curve",
   "draw_cycle": "Draw Cycle Comparison",
-  "display_cycle": "Display Comparison",
   "save_cycle": "Save Comparison",
   "peaks_upward": "Peaks Always Upward",
   "center_peak": "Center Peak",
-  "fit_segment_data": "Fit Segment Data",
-  "fit_segment_data_ml": "Fit Segment Data (ML)",
-  "test_mode": "Test Mode",
   "left_boundary": "Left Boundary (min)",
   "right_boundary": "Right Boundary (min)",
-  "peak_prominence": "Peak Prominence",
   "select_at_least_one": "Select at least one item",
 
   "data_folder": "Data Folder",
@@ -69,7 +60,6 @@
   "add_region": "Add",
 
   "save_image": "Save Image",
-  "display_image": "Display Image",
   "save_sample_info": "Save Sample Info",
   "save_plot_data": "Save Plot Data",
   "ir_dpt_files": "DPT Files",
@@ -84,8 +74,6 @@
   "clean_folder": "Clean Folder",
   "run_clean": "Run Clean",
   "clean_success": "Clean Completed",
-  "unsupported_os": "Unsupported Operating System",
-  "cannot_open_folder": "Cannot open folder: {{path}}",
 
   "contact_info": "PolyAnalyzer - Polymer Analysis Tool"
 }

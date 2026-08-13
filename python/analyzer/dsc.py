@@ -31,16 +31,8 @@ from .base import (
     resolve_contained_file,
 )
 
-# Color palette for cycle overlay plots.
-# Try importing from the project-level ``cnames`` module; fall back to a
-# built-in matplotlib tab palette so the analyser works stand-alone.
-try:
-    from cnames import clist as _COLOR_LIST  # type: ignore[import-untyped]
-except ImportError:
-    _COLOR_LIST: List[str] = [
-        "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
-        "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",
-    ]
+# Color palette for cycle overlay plots — shared with the GPC analyzer.
+from .cnames import clist as _COLOR_LIST
 
 
 class DSCAnalyzer(BaseAnalyzer):
@@ -53,7 +45,6 @@ class DSCAnalyzer(BaseAnalyzer):
         save_seg_mode: bool = True,
         draw_seg_mode: bool = True,
         draw_cycle: bool = True,
-        display_pic: bool = True,
         save_cycle_pic: bool = True,
         peaks_upward: bool = False,
         center_peak: bool = False,
@@ -90,7 +81,6 @@ class DSCAnalyzer(BaseAnalyzer):
         self.save_seg_mode: bool = save_seg_mode
         self.draw_seg_mode: bool = draw_seg_mode
         self.draw_cycle: bool = draw_cycle
-        self.display_pic: bool = display_pic
         self.save_cycle_pic: bool = save_cycle_pic
         self.peaks_upward: bool = peaks_upward
         self.center_peak: bool = center_peak
@@ -454,168 +444,161 @@ class DSCAnalyzer(BaseAnalyzer):
                 continue
 
             fig = plt.figure(dpi=FIGURE_DPI, figsize=FIGURE_SIZE_WITHOUT_TABLE)
-            if self.transparent_back:
-                fig.patch.set_alpha(0.0)
+            try:
+                if self.transparent_back:
+                    fig.patch.set_alpha(0.0)
 
-            ax = fig.add_subplot(111)
+                ax = fig.add_subplot(111)
 
-            x = data[:, 1]
-            y = data[:, 2]
+                x = data[:, 1]
+                y = data[:, 2]
 
-            # 如果勾选了峰始终向上
-            if self.peaks_upward and len(x) > 1:
-                # 升温(吸热)峰向下 → 翻转Y轴使峰向上
-                if x[-1] > x[0]:
-                    y = -y
+                # 如果勾选了峰始终向上
+                if self.peaks_upward and len(x) > 1:
+                    # 升温(吸热)峰向下 → 翻转Y轴使峰向上
+                    if x[-1] > x[0]:
+                        y = -y
 
-            # 如果勾选了峰居中
-            if self.center_peak and len(x) > 1:
-                peak_idx: int = 0
-                if self.peaks_upward:
-                    peak_idx = int(np.argmax(y))
-                else:
-                    y_centered = y - np.median(y)
-                    if np.abs(np.min(y_centered)) > np.abs(np.max(y_centered)):
-                        peak_idx = int(np.argmin(y))
-                    else:
+                # 如果勾选了峰居中
+                if self.center_peak and len(x) > 1:
+                    peak_idx: int = 0
+                    if self.peaks_upward:
                         peak_idx = int(np.argmax(y))
+                    else:
+                        y_centered = y - np.median(y)
+                        if np.abs(np.min(y_centered)) > np.abs(np.max(y_centered)):
+                            peak_idx = int(np.argmin(y))
+                        else:
+                            peak_idx = int(np.argmax(y))
 
-                peak_x = x[peak_idx]
-                span = float(max(x) - min(x))
-                plt.xlim(peak_x - span / 2, peak_x + span / 2)
+                    peak_x = x[peak_idx]
+                    span = float(max(x) - min(x))
+                    plt.xlim(peak_x - span / 2, peak_x + span / 2)
 
-            plt.plot(x, y, color=self.curve_color, linewidth=self.line_width)
+                plt.plot(x, y, color=self.curve_color, linewidth=self.line_width)
 
-            # 设置坐标轴粗细
-            for spine in ax.spines.values():
-                spine.set_linewidth(self.axis_width)
+                # 设置坐标轴粗细
+                for spine in ax.spines.values():
+                    spine.set_linewidth(self.axis_width)
 
-            xlabel = self.heads.get(2, "Temperature")
-            ylabel = self.heads.get(3, "Heat Flow")
+                xlabel = self.heads.get(2, "Temperature")
+                ylabel = self.heads.get(3, "Heat Flow")
 
-            font1 = {
-                "size": self.axis_font_size,
-                "weight": "bold",
-                "fontname": "Arial",
-            }
-            plt.xlabel(xlabel, labelpad=4, fontdict=font1)
-            plt.ylabel(ylabel, labelpad=4, fontdict=font1)
-            plt.xticks(weight="bold")
-            plt.yticks(weight="bold")
+                font1 = {
+                    "size": self.axis_font_size,
+                    "weight": "bold",
+                    "fontname": "Arial",
+                }
+                plt.xlabel(xlabel, labelpad=4, fontdict=font1)
+                plt.ylabel(ylabel, labelpad=4, fontdict=font1)
+                plt.xticks(weight="bold")
+                plt.yticks(weight="bold")
 
-            pic_subdir = os.path.join(
-                self.pic_dir, os.path.splitext(self.filename)[0]
-            )
-            if not os.path.exists(pic_subdir):
-                os.makedirs(pic_subdir, exist_ok=True)
+                pic_subdir = os.path.join(
+                    self.pic_dir, os.path.splitext(self.filename)[0]
+                )
+                if not os.path.exists(pic_subdir):
+                    os.makedirs(pic_subdir, exist_ok=True)
 
-            plt.savefig(
-                os.path.join(pic_subdir, f"Cycle {num + 1}.png"),
-                transparent=self.transparent_back,
-            )
-            plt.close(fig)
+                plt.savefig(
+                    os.path.join(pic_subdir, f"Cycle {num + 1}.png"),
+                    transparent=self.transparent_back,
+                )
+            finally:
+                plt.close(fig)
 
     def cycle_draw(
         self,
         progress_start: float = 0.8,
         progress_end: float = 0.98,
-    ) -> List[plt.Figure]:
-        """绘制循环叠加图
-
-        Returns:
-            A list of matplotlib *Figure* objects (one per cycle directory)
-            so that callers / the frontend can display them as needed.
-        """
+    ) -> None:
+        """绘制循环叠加图(每个 Cycle 目录一张 result.png)。"""
         cycle_list = sorted(
             path
             for path in glob.glob(os.path.join(self.cycle_dir, "Cycle*"))
             if os.path.isdir(path)
         )
-        figures: List[plt.Figure] = []
 
         for pro, cycle_path in enumerate(cycle_list):
             fig = plt.figure(dpi=300, figsize=(16, 8))
-            labels: List[str] = []
+            try:
+                labels: List[str] = []
 
-            csv_files = [
-                path
-                for path in glob.glob(os.path.join(cycle_path, "*.csv"))
-                if os.path.isfile(path)
-            ]
+                csv_files = [
+                    path
+                    for path in glob.glob(os.path.join(cycle_path, "*.csv"))
+                    if os.path.isfile(path)
+                ]
 
-            # 用于计算平均峰位置
-            peak_x_list: List[float] = []
-            all_x_min: List[float] = []
-            all_x_max: List[float] = []
+                # 用于计算平均峰位置
+                peak_x_list: List[float] = []
+                all_x_min: List[float] = []
+                all_x_max: List[float] = []
 
-            for num, file in enumerate(csv_files):
-                try:
-                    data = np.loadtxt(file, delimiter=",")
-                    name = os.path.splitext(os.path.basename(file))[0]
+                for num, file in enumerate(csv_files):
+                    try:
+                        data = np.loadtxt(file, delimiter=",")
+                        name = os.path.splitext(os.path.basename(file))[0]
 
-                    x = data[:, 0]
-                    y = data[:, 1]
+                        x = data[:, 0]
+                        y = data[:, 1]
 
-                    if len(x) <= 1:
-                        continue
+                        if len(x) <= 1:
+                            continue
 
-                    # 如果勾选了峰始终向上
-                    if self.peaks_upward:
-                        if x[-1] > x[0]:
-                            y = -y
-
-                    # 收集峰位置信息用于居中
-                    if self.center_peak:
-                        peak_idx: int = 0
+                        # 如果勾选了峰始终向上
                         if self.peaks_upward:
-                            peak_idx = int(np.argmax(y))
-                        else:
-                            y_centered = y - np.median(y)
-                            if np.abs(np.min(y_centered)) > np.abs(
-                                np.max(y_centered)
-                            ):
-                                peak_idx = int(np.argmin(y))
-                            else:
+                            if x[-1] > x[0]:
+                                y = -y
+
+                        # 收集峰位置信息用于居中
+                        if self.center_peak:
+                            peak_idx: int = 0
+                            if self.peaks_upward:
                                 peak_idx = int(np.argmax(y))
-                        peak_x_list.append(float(x[peak_idx]))
-                        all_x_min.append(float(min(x)))
-                        all_x_max.append(float(max(x)))
+                            else:
+                                y_centered = y - np.median(y)
+                                if np.abs(np.min(y_centered)) > np.abs(
+                                    np.max(y_centered)
+                                ):
+                                    peak_idx = int(np.argmin(y))
+                                else:
+                                    peak_idx = int(np.argmax(y))
+                            peak_x_list.append(float(x[peak_idx]))
+                            all_x_min.append(float(min(x)))
+                            all_x_max.append(float(max(x)))
 
-                    color_idx = num % len(self.color_list)
-                    plt.plot(x, y, c=self.color_list[color_idx], label=name)
-                    labels.append(name)
-                except Exception as e:
-                    self.logger.warning(f"读取CSV失败 {file}: {e}")
+                        color_idx = num % len(self.color_list)
+                        plt.plot(x, y, c=self.color_list[color_idx], label=name)
+                        labels.append(name)
+                    except Exception as e:
+                        self.logger.warning(f"读取CSV失败 {file}: {e}")
 
-            # 应用峰居中
-            if self.center_peak and peak_x_list:
-                avg_peak_x = float(np.mean(peak_x_list))
-                if all_x_min and all_x_max:
-                    avg_span = float(
-                        np.mean(np.array(all_x_max) - np.array(all_x_min))
-                    )
-                    plt.xlim(avg_peak_x - avg_span / 2, avg_peak_x + avg_span / 2)
+                # 应用峰居中
+                if self.center_peak and peak_x_list:
+                    avg_peak_x = float(np.mean(peak_x_list))
+                    if all_x_min and all_x_max:
+                        avg_span = float(
+                            np.mean(np.array(all_x_max) - np.array(all_x_min))
+                        )
+                        plt.xlim(avg_peak_x - avg_span / 2, avg_peak_x + avg_span / 2)
 
-            if labels:
-                plt.legend(labels)
+                if labels:
+                    plt.legend(labels)
 
-            if self.save_cycle_pic:
-                plt.savefig(os.path.join(cycle_path, "result.png"))
+                if self.save_cycle_pic:
+                    plt.savefig(os.path.join(cycle_path, "result.png"))
 
-            # 进度更新
-            fraction = (pro + 1) / len(cycle_list)
-            self._emit_progress(
-                progress_start + (progress_end - progress_start) * fraction,
-                "画图进度 {}/{} {:.2f}%".format(
-                    pro + 1, len(cycle_list), fraction * 100
-                ),
-            )
-
-            figures.append(fig)
-
-            plt.close(fig)
-
-        return figures
+                # 进度更新
+                fraction = (pro + 1) / len(cycle_list)
+                self._emit_progress(
+                    progress_start + (progress_end - progress_start) * fraction,
+                    "画图进度 {}/{} {:.2f}%".format(
+                        pro + 1, len(cycle_list), fraction * 100
+                    ),
+                )
+            finally:
+                plt.close(fig)
 
     # -- main entry point --------------------------------------------------
 
@@ -725,4 +708,3 @@ class DSCAnalyzer(BaseAnalyzer):
                 shutil.rmtree(staging_cycle_dir, ignore_errors=True)
             if os.path.isdir(staging_pic_dir):
                 shutil.rmtree(staging_pic_dir, ignore_errors=True)
-            plt.close("all")

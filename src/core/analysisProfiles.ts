@@ -19,8 +19,11 @@ export function fromProfileFile(analyzer: SettingsAnalyzer, name: string): strin
   return name.endsWith(".ini") ? name.slice(0, -4) : name;
 }
 
-export function toBackendSettings(settings: AnalyzerSettings): Record<string, unknown> {
-  return {
+export function toBackendSettings(
+  analyzer: SettingsAnalyzer,
+  settings: AnalyzerSettings,
+): Record<string, unknown> {
+  const backend: Record<string, unknown> = {
     bar_color: settings.barColor,
     mw_color: settings.mwColor,
     curve_color: settings.curveColor,
@@ -37,6 +40,11 @@ export function toBackendSettings(settings: AnalyzerSettings): Record<string, un
     normalize_overlay: settings.normalizeOverlay,
     normalization_peak: settings.normalizationPeak,
   };
+  // segmentpos 只属于 Mw Analysis Profile，避免污染 DSC/IR 的 Profile 文件。
+  if (analyzer === "mw") {
+    backend.segmentpos = settings.segmentpos;
+  }
+  return backend;
 }
 
 export function fromBackendSettings(
@@ -49,8 +57,13 @@ export function fromBackendSettings(
     typeof value[key] === "boolean" ? value[key] as boolean : fallback;
   const string = (key: string, fallback: string) =>
     typeof value[key] === "string" ? value[key] as string : fallback;
+  const numberArray = (key: string, fallback: number[]) =>
+    Array.isArray(value[key])
+      ? (value[key] as unknown[]).filter((item): item is number => typeof item === "number")
+      : fallback;
 
   return {
+    segmentpos: numberArray("segmentpos", base.segmentpos),
     barColor: string("bar_color", base.barColor),
     mwColor: string("mw_color", base.mwColor),
     curveColor: string("curve_color", base.curveColor),

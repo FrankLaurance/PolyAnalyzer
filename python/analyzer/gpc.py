@@ -57,7 +57,6 @@ class GPCAnalyzer(BaseAnalyzer):
         output_filename: str,
         save_file: bool = True,
         save_picture: bool = True,
-        display_mode: bool = True,
         save_figure_file_gpc: bool = True,
         test_mode: bool = False,
         progress_callback: Optional[Callable[[float, str], None]] = None,
@@ -74,7 +73,6 @@ class GPCAnalyzer(BaseAnalyzer):
         # 运行模式
         self.save_file: bool = save_file
         self.save_picture: bool = save_picture
-        self.display_mode: bool = display_mode
         self.save_figure_file_gpc: bool = save_figure_file_gpc
 
         # 画图颜色库
@@ -275,12 +273,16 @@ class GPCAnalyzer(BaseAnalyzer):
 
         # 在开始处理前清空 peak_data，确保不会累积旧数据
         self.peak_data = {}
+        # 每个文件的 read_file 都会重置 mw_data，因此在这里跨文件累积汇总行，
+        # 保证汇总 CSV 覆盖所有输入文件（叠加图通过 peak_data 累积，不受影响）。
+        accumulated_mw_data: list = []
 
         for pro, filename in enumerate(self.file_list):
             self.filename = filename
             try:
                 if self.read_file(filename, reset_peak_data=False):
                     self.preprocess()
+                    accumulated_mw_data.extend(self.mw_data)
                     self.logger.info(f"成功处理文件: {filename}")
             except Exception as e:
                 self.logger.error(
@@ -294,6 +296,8 @@ class GPCAnalyzer(BaseAnalyzer):
                         (pro + 1) / total,
                         f"画图进度 {pro + 1}/{total} {pct:.2f}%",
                     )
+
+        self.mw_data = accumulated_mw_data
 
         if self.info_callback:
             self.info_callback("绘制图片")

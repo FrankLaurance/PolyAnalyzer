@@ -41,7 +41,7 @@ export function useAnalysisProfiles(
         await sendRequest("settings.save", {
           type: analyzer,
           name: toProfileFile(analyzer, name),
-          setting: toBackendSettings(settings),
+          setting: toBackendSettings(analyzer, settings),
         });
       }
 
@@ -64,7 +64,7 @@ export function useAnalysisProfiles(
     await sendRequest("settings.save", {
       type: analyzer,
       name: toProfileFile(analyzer, name),
-      setting: toBackendSettings(state.analyzerSettings[analyzer]),
+      setting: toBackendSettings(analyzer, state.analyzerSettings[analyzer]),
     });
   }, [analyzer, sendRequest]);
 

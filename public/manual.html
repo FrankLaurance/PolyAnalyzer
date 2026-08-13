@@ -149,6 +149,8 @@
   }
   function applyLang(lang) {
     const target = lang === "en" ? "en" : "zh";
+    // 与主应用保持一致：存储 en_US / zh_CN，切换才能双向往返。
+    localStorage.setItem("polyanalyzer-language", target === "en" ? "en_US" : "zh_CN");
     document.documentElement.lang = target === "en" ? "en" : "zh";
     document.querySelectorAll("[data-lang]").forEach((el) => {
       el.hidden = el.getAttribute("data-lang") !== target;
@@ -184,7 +186,7 @@
     <!-- ============ 中文 ============ -->
     <div data-lang="zh">
       <h1>PolyAnalyzer 使用说明</h1>
-      <p class="muted">版本 2.4.1 · 聚合物分析桌面应用（GPC / Mw / DSC / IR）</p>
+      <p class="muted">版本 2.4.2 · 聚合物分析桌面应用（GPC / Mw / DSC / IR）</p>
 
       <nav class="toc">
         <div class="toc-title">目录</div>
@@ -270,7 +272,7 @@
         <li>调整峰方向、居中、左右边界和绘图样式。</li>
         <li>点击"运行"。</li>
       </ol>
-      <p>桌面前端不会要求 Python 打开交互式图片窗口，DSC 的 <code>display_pic</code> 固定为 <code>false</code>。界面中被禁用的依赖选项也会以 <code>false</code> 提交。</p>
+      <p>桌面端不会打开交互式图片窗口，所有图片直接写入输出目录；界面中被禁用的依赖选项会以 <code>false</code> 提交。</p>
       <h3>输出</h3>
       <ul>
         <li><code>DSC_Cycle/</code>：分段数据和循环对比结果</li>
@@ -364,7 +366,7 @@ poly clean --datadir ./datapath --yes</code></pre>
     <!-- ============ English ============ -->
     <div data-lang="en" hidden>
       <h1>PolyAnalyzer Manual</h1>
-      <p class="muted">Version 2.4.1 · Polymer analysis desktop app (GPC / Mw / DSC / IR)</p>
+      <p class="muted">Version 2.4.2 · Polymer analysis desktop app (GPC / Mw / DSC / IR)</p>
 
       <nav class="toc">
         <div class="toc-title">Contents</div>
@@ -450,7 +452,7 @@ poly clean --datadir ./datapath --yes</code></pre>
         <li>Adjust peak orientation, centering, left/right boundaries and plot styles.</li>
         <li>Click "Run".</li>
       </ol>
-      <p>The desktop frontend never asks Python to open interactive image windows; DSC's <code>display_pic</code> is always <code>false</code>. Disabled dependent options are also submitted as <code>false</code>.</p>
+      <p>The desktop frontend never opens interactive image windows; all figures are written straight into the output directories. Disabled dependent options are submitted as <code>false</code>.</p>
       <h3>Outputs</h3>
       <ul>
         <li><code>DSC_Cycle/</code> — segment data and cycle comparison results</li>

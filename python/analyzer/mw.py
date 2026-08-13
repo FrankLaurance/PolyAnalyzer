@@ -65,7 +65,6 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         axis_font_size: float = 14,
         transparent_back: bool = DEFAULT_TRANSPARENT_BACK,
         save_picture: bool = True,
-        display_picture: bool = False,
         bar_color: str = DEFAULT_BAR_COLOR,
         mw_color: str = DEFAULT_MW_COLOR,
         draw_bar: bool = True,
@@ -133,7 +132,6 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         self.test_mode: bool = test_mode
         self.save_file: bool = save_file
         self.save_picture: bool = save_picture
-        self.display_picture: bool = display_picture
 
     # ------------------------------------------------------------------
     # Directory helpers
@@ -142,15 +140,6 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
     def clear_dir(self) -> None:  # type: ignore[override]
         """清空输出目录"""
         super().clear_dir(self.output_dir)
-
-    def check_dir(self) -> bool:
-        """检查输出目录中是否存在同名文件"""
-        if not self.selected_file:
-            return False
-        for file in self.selected_file:
-            if os.path.exists(os.path.join(self.output_dir, os.path.splitext(file)[0] + ".png")):
-                return True
-        return False
 
     # ------------------------------------------------------------------
     # Settings
@@ -185,15 +174,6 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
     def change_setting(self, settingname: str) -> None:
         """切换到指定的设置"""
         self.setting_name = settingname
-
-    # ------------------------------------------------------------------
-    # Region management
-    # ------------------------------------------------------------------
-
-    def add_region(self, new_region: int) -> None:
-        """添加新的分子量区间分割点"""
-        self.segmentpos.append(new_region)
-        self.segmentpos.sort()
 
     # ------------------------------------------------------------------
     # File I/O
@@ -415,26 +395,33 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         result_name = self.title_name or self.filename.split(".")[0]
         plt.title(result_name, pad=10, fontdict=font2)
 
+    def _distribution_rows(self, segment_percentages: List[float]) -> List[List[str]]:
+        """构建分子量区间分布表行 — 每个区间一行，首区间标 `< 上限`。
+
+        ``segment_percentages`` 与 ``selectedpos`` 的区间一一对应
+        （区间 i 的边界为 ``selectedpos[i]`` 与 ``selectedpos[i + 1]``）。
+        """
+        rows: List[List[str]] = []
+        for segment_idx in range(len(self.selectedpos) - 1):
+            upper = self.selectedpos[segment_idx + 1]
+            if segment_idx == 0:
+                range_label = "< " + self.transform_number(upper)
+            else:
+                range_label = (
+                    self.transform_number(self.selectedpos[segment_idx])
+                    + " ~ "
+                    + self.transform_number(upper)
+                )
+            percentage_text = "{:.2f}%".format(segment_percentages[segment_idx])
+            rows.append([range_label, percentage_text])
+        return rows
+
     def _create_distribution_table(self, fig: Any, gs: Any, segment_percentages: List[float]) -> None:
         """创建分子量区间分布表格"""
         from plottable import ColumnDefinition, Table
 
         ax1 = fig.add_subplot(gs[:6, 5:7])
-        distribution_data: List[List[str]] = []
-
-        for segment_idx, _pos in enumerate(self.selectedpos[1:-1]):
-            if segment_idx == 0:
-                range_label = "< " + self.transform_number(self.selectedpos[segment_idx + 1])
-            elif segment_idx == len(self.selectedpos[1:-1]) - 1:
-                range_label = ">" + self.transform_number(self.selectedpos[segment_idx])
-            else:
-                range_label = (
-                    self.transform_number(self.selectedpos[segment_idx])
-                    + " ~ "
-                    + self.transform_number(self.selectedpos[segment_idx + 1])
-                )
-            percentage_text = "{:.2f}%".format(segment_percentages[segment_idx])
-            distribution_data.append([range_label, percentage_text])
+        distribution_data = self._distribution_rows(segment_percentages)
 
         df_distribution = pd.DataFrame(data=distribution_data, columns=["Mw", "Percent"]).set_index("Mw")
         Table(
@@ -449,29 +436,34 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
             row_dividers=True,
         )
 
-    def _create_stats_table(self, fig: Any, gs: Any) -> None:
-        """创建分子量统计数据表格"""
-        from plottable import ColumnDefinition, Table
-
-        stats_data: List[List[str]] = []
-        ax2 = fig.add_subplot(gs[7, 5:7])
-
-        if (
+    def _stats_rows(self) -> List[List[str]]:
+        """构建统计数据表行 — 每行使用对应样品的 Mn/Mw/PDI。"""
+        if not (
             self.mw_data
             and len(self.mw_data) > 0
             and self.validator.validate_array_shape(
                 np.array(self.mw_data), min_rows=1, min_cols=MIN_MW_DATA_COLUMNS, name="分子量数据"
             )
         ):
-            for mw_row in self.mw_data:
-                if len(mw_row) >= MIN_MW_DATA_COLUMNS:
-                    # index 2=Mn, 3=Mw, 7=PDI
-                    stats_data.append([self.mw_data[0][2], self.mw_data[0][3], self.mw_data[0][7]])
-                else:
-                    self.logger.warning("分子量数据不完整，跳过表格生成", show_ui=True)
-                    break
-        else:
             self.logger.warning("分子量数据格式错误，跳过表格生成", show_ui=True)
+            return []
+
+        stats_rows: List[List[str]] = []
+        for mw_row in self.mw_data:
+            if len(mw_row) >= MIN_MW_DATA_COLUMNS:
+                # index 2=Mn, 3=Mw, 7=PDI
+                stats_rows.append([mw_row[2], mw_row[3], mw_row[7]])
+            else:
+                self.logger.warning("分子量数据不完整，跳过表格生成", show_ui=True)
+                break
+        return stats_rows
+
+    def _create_stats_table(self, fig: Any, gs: Any) -> None:
+        """创建分子量统计数据表格"""
+        from plottable import ColumnDefinition, Table
+
+        ax2 = fig.add_subplot(gs[7, 5:7])
+        stats_data = self._stats_rows()
 
         if stats_data:
             df_stats = pd.DataFrame(data=stats_data, columns=["Mn", "Mw", "PDI"]).set_index("Mn")
@@ -519,10 +511,6 @@ class MolecularWeightAnalyzer(BaseAnalyzer):
         finally:
             if fig is not None:
                 plt.close(fig)
-
-    def output_data(self) -> None:
-        """输出数据（占位）"""
-        _column = ["Samplename", "Mp", "Mn", "Mw", "Mz", "Mz+1", "Mv", "PD"]
 
     def _run_to_output(self) -> bool:
         """运行分析流程 — 处理所有选中的文件，生成分子量分布图"""

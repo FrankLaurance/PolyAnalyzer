@@ -5,6 +5,7 @@ import i18n from "../i18n";
 export type SettingsAnalyzer = "mw" | "dsc" | "ir";
 
 export interface AnalyzerSettings {
+  segmentpos: number[];
   barColor: string;
   mwColor: string;
   curveColor: string;
@@ -23,6 +24,7 @@ export interface AnalyzerSettings {
 }
 
 export const defaultAnalyzerSettings: AnalyzerSettings = {
+  segmentpos: [0, 5000, 10000, 50000, 100000, 500000, 1000000, 5000000, 10000000, 50000000],
   barColor: "#002FA7",
   mwColor: "#FF6A07",
   curveColor: "#002FA7",

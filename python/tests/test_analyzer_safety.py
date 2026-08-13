@@ -113,6 +113,54 @@ class InstallAndNameSafetyTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         manager.get_setting_path(unsafe)
 
+    def test_corrupt_profile_raises_and_preserves_both_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manager = base.SettingsManager(str(root), "defaultSetting.ini", {"bar_color": "#000000"})
+            manager.save_setting({"bar_color": "#111111"})
+            broken = root / "broken.ini"
+            broken.write_text("{not valid json", encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                manager.load_setting("broken.ini")
+
+            self.assertEqual("{not valid json", broken.read_text(encoding="utf-8"))
+            self.assertEqual("#111111", manager.load_setting("defaultSetting.ini")["bar_color"])
+
+    def test_missing_custom_profile_raises_without_touching_default(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manager = base.SettingsManager(str(root), "defaultSetting.ini", {"bar_color": "#000000"})
+            manager.save_setting({"bar_color": "#111111"})
+
+            with self.assertRaises(FileNotFoundError):
+                manager.load_setting("missing.ini")
+
+            self.assertFalse((root / "missing.ini").exists())
+            self.assertEqual("#111111", manager.load_setting("defaultSetting.ini")["bar_color"])
+
+    def test_save_setting_is_atomic_and_leaves_no_temp_files(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manager = base.SettingsManager(str(root), "defaultSetting.ini", {})
+            manager.save_setting({"bar_color": "#222222"})
+
+            loaded = json.loads((root / "defaultSetting.ini").read_text(encoding="utf-8"))
+            self.assertEqual("#222222", loaded["bar_color"])
+            leftovers = [p.name for p in root.iterdir() if p.name.endswith(".tmp")]
+            self.assertEqual([], leftovers)
+
+    def test_create_default_setting_returns_independent_copy(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            default = {"segmentpos": [1, 2, 3]}
+            manager = base.SettingsManager(temp_dir, "defaultSetting.ini", default)
+
+            loaded = manager.create_default_setting()
+            loaded["segmentpos"].append(4)
+
+            self.assertEqual([1, 2, 3], default["segmentpos"])
+            self.assertEqual([1, 2, 3, 4], loaded["segmentpos"])
+
     def test_settings_list_excludes_non_profile_files(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             manager = base.SettingsManager(temp_dir, "default.ini", {})
@@ -190,6 +238,43 @@ class MolecularWeightFailureTests(unittest.TestCase):
                     "id": 11,
                 })
             self.assertIn("error", response)
+
+
+class MwTableTests(unittest.TestCase):
+    def _make_analyzer(self, temp_dir: str):
+        with patch.object(mw, "get_install_dir", return_value=temp_dir):
+            return mw.MolecularWeightAnalyzer(temp_dir)
+
+    def test_distribution_table_covers_every_interval(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            analyzer = self._make_analyzer(temp_dir)
+            analyzer.selectedpos = [
+                0, 5000, 10000, 50000, 100000, 500000,
+                1000000, 5000000, 10000000, 50000000,
+            ]
+            percentages = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+
+            rows = analyzer._distribution_rows(percentages)
+
+        # 10 个边界 → 9 个区间必须全部出现
+        self.assertEqual(9, len(rows))
+        self.assertEqual(["< 5.0 × 10$^3$", "1.00%"], rows[0])
+        self.assertEqual(["5.0 × 10$^3$ ~ 1.0 × 10$^4$", "2.00%"], rows[1])
+        # 最后一个区间不再缺失，且百分比与区间对齐
+        self.assertEqual(["1.0 × 10$^7$ ~ 5.0 × 10$^7$", "9.00%"], rows[8])
+
+    def test_stats_rows_use_each_samples_own_values(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            analyzer = self._make_analyzer(temp_dir)
+            # 行结构: [Samplename, Mp, Mn, Mw, Mz, Mz+1, Mv, PD]
+            analyzer.mw_data = [
+                ["s1", "100", "10", "1000", "10000", "100000", "1000000", "1.5"],
+                ["s2", "200", "20", "2000", "20000", "200000", "2000000", "2.5"],
+            ]
+
+            rows = analyzer._stats_rows()
+
+        self.assertEqual([["10", "1000", "1.5"], ["20", "2000", "2.5"]], rows)
 
 
 class IrRegressionTests(unittest.TestCase):
@@ -301,6 +386,11 @@ class IrRegressionTests(unittest.TestCase):
 
 
 class DscRegressionTests(unittest.TestCase):
+    def test_dsc_palette_matches_shared_palette(self):
+        from analyzer import cnames
+
+        self.assertEqual(cnames.clist, dsc._COLOR_LIST)
+
     def _make_valid_analyzer(self, root, progress):
         data_dir = root / "data"
         data_dir.mkdir()
@@ -310,7 +400,6 @@ class DscRegressionTests(unittest.TestCase):
             save_seg_mode=True,
             draw_seg_mode=False,
             draw_cycle=True,
-            display_pic=True,
             progress_callback=lambda value, _message: progress.append(value),
         )
         analyzer.selected_file = ["sample.txt"]
@@ -353,7 +442,6 @@ class DscRegressionTests(unittest.TestCase):
                 save_seg_mode=False,
                 draw_seg_mode=False,
                 draw_cycle=False,
-                display_pic=False,
             )
             analyzer.selected_file = ["missing.txt"]
 

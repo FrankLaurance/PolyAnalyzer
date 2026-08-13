@@ -132,7 +132,6 @@ export default function IrPanel() {
       setResult("ir", {
         success: true,
         message: "IR analysis complete",
-        data: result,
       });
       message.success(t("complete", { time: elapsed }));
     } catch (err) {

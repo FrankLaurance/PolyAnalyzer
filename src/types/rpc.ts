@@ -64,7 +64,6 @@ export interface RpcContract {
       selected_files?: string[];
       save_file: boolean;
       save_picture: boolean;
-      display_mode: boolean;
       save_figure_file_gpc: boolean;
       confirm_overwrite: boolean;
     };
@@ -75,7 +74,6 @@ export interface RpcContract {
       datadir: string;
       selected_files: string[];
       save_picture: boolean;
-      display_picture: boolean;
       segmentpos: number[];
       bar_color: string;
       mw_color: string;
@@ -93,7 +91,6 @@ export interface RpcContract {
       save_seg_mode: boolean;
       draw_seg_mode: boolean;
       draw_cycle: boolean;
-      display_pic: boolean;
       save_cycle_pic: boolean;
       peaks_upward: boolean;
       center_peak: boolean;

@@ -56,7 +56,6 @@ interface PendingRequest {
 type SidecarChild = Awaited<ReturnType<Command<string>["spawn"]>>;
 
 const progressListeners = new Map<BridgeAnalyzer, Set<(progress: ProgressInfo) => void>>();
-const connectionListeners = new Set<(connected: boolean) => void>();
 const engineStatusListeners = new Set<(status: EngineStatus) => void>();
 const pendingRequests = new Map<number, PendingRequest>();
 
@@ -71,10 +70,6 @@ const lastProgressSnapshots = new Map<BridgeAnalyzer, ProgressInfo>();
 
 const SHORT_REQUEST_TIMEOUT_MS = 30_000;
 const ANALYZE_REQUEST_TIMEOUT_MS = 5 * 60_000;
-
-function emitConnection(connected: boolean) {
-  connectionListeners.forEach((listener) => listener(connected));
-}
 
 function emitProgress(analyzer: BridgeAnalyzer, progress: ProgressInfo) {
   lastProgressSnapshots.set(analyzer, progress);
@@ -100,7 +95,6 @@ function clearSidecarState(generation: number, reason: Error) {
   sidecarChild = null;
   spawnPromise = null;
   stdoutBuffer = "";
-  emitConnection(false);
   emitEngineStatus("idle");
   rejectPending(reason);
 }
@@ -111,7 +105,6 @@ async function resetSidecar(reason: Error) {
   sidecarChild = null;
   spawnPromise = null;
   stdoutBuffer = "";
-  emitConnection(false);
   rejectPending(reason);
   if (child) {
     try {
@@ -217,12 +210,10 @@ async function ensureSidecarSpawned() {
         throw new Error("Sidecar spawn was superseded");
       }
       sidecarChild = child;
-      emitConnection(true);
     })
     .catch((err: unknown) => {
       if (generation === sidecarGeneration) {
         sidecarChild = null;
-        emitConnection(false);
       }
       throw err;
     })
@@ -298,7 +289,6 @@ function sendJsonRpcRequest<M extends RpcMethod>(
 }
 
 export function usePythonBridge(analyzer: BridgeAnalyzer) {
-  const [isConnected, setIsConnected] = useState(Boolean(sidecarChild));
   const [lastProgress, setLastProgress] = useState<ProgressInfo>(
     () => lastProgressSnapshots.get(analyzer) ?? { analyzer, progress: 0, message: "" },
   );
@@ -311,14 +301,12 @@ export function usePythonBridge(analyzer: BridgeAnalyzer) {
     setLastProgress(
       lastProgressSnapshots.get(analyzer) ?? { analyzer, progress: 0, message: "" },
     );
-    connectionListeners.add(setIsConnected);
     engineStatusListeners.add(setEngineStatus);
     setEngineStatus(engineStatusSnapshot);
     return () => {
       const currentListeners = progressListeners.get(analyzer);
       currentListeners?.delete(setLastProgress);
       if (currentListeners?.size === 0) progressListeners.delete(analyzer);
-      connectionListeners.delete(setIsConnected);
       engineStatusListeners.delete(setEngineStatus);
     };
   }, [analyzer]);
@@ -328,5 +316,5 @@ export function usePythonBridge(analyzer: BridgeAnalyzer) {
     [analyzer],
   );
 
-  return { sendRequest, isConnected, lastProgress, engineStatus };
+  return { sendRequest, lastProgress, engineStatus };
 }

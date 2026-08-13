@@ -99,7 +99,6 @@ export default function GpcPanel() {
         selected_files: selectPartial ? selectedFiles : undefined,
         save_file: saveSampleInfo,
         save_picture: saveImage,
-        display_mode: false,
         save_figure_file_gpc: savePlotData,
         confirm_overwrite: confirmOverwrite,
       });
@@ -110,7 +109,6 @@ export default function GpcPanel() {
       setResult("gpc", {
         success: true,
         message: "GPC analysis complete",
-        data: result,
       });
       message.success(t("complete", { time: elapsed }));
     } catch (err) {
