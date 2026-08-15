@@ -20,6 +20,24 @@ os.environ["MPLCONFIGDIR"] = _MPL_CACHE_DIR
 os.environ["XDG_CACHE_HOME"] = _XDG_CACHE_DIR
 
 
+def _configure_standard_streams() -> None:
+    """Use UTF-8 for the JSON-RPC pipes on every platform.
+
+    Windows configures redirected Python streams with the system ANSI code
+    page. Tauri's shell plugin decodes sidecar output as UTF-8, so any Chinese
+    progress or log message would otherwise break the transport.
+    """
+    streams = (
+        (sys.stdin, "strict"),
+        (sys.stdout, "strict"),
+        (sys.stderr, "backslashreplace"),
+    )
+    for stream, errors in streams:
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8", errors=errors)
+
+
 def _setup_logging() -> None:
     """Configure logging to stderr so stdout stays clean for JSON-RPC."""
     logging.basicConfig(
@@ -65,6 +83,7 @@ def _warm_runtime_async(logger: logging.Logger, delay: float = 3.0) -> None:
 
 
 def main() -> None:
+    _configure_standard_streams()
     _setup_logging()
     logger = logging.getLogger(__name__)
 

@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 PYTHON_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PYTHON_DIR))
@@ -50,6 +51,36 @@ class WarmupNotificationTests(unittest.TestCase):
 
         self.assertTrue(msg["params"]["warmup"])
         self.assertEqual(100.0, msg["params"]["progress"])
+
+
+class SidecarStandardStreamTests(unittest.TestCase):
+    def test_sidecar_protocol_reconfigures_non_utf8_pipes(self) -> None:
+        request = {"jsonrpc": "2.0", "id": 1, "params": {"path": "C:\\中文目录"}}
+        stdin_bytes = io.BytesIO(
+            (json.dumps(request, ensure_ascii=False) + "\n").encode("utf-8")
+        )
+        stdout_bytes = io.BytesIO()
+        stderr_bytes = io.BytesIO()
+        stdin = io.TextIOWrapper(stdin_bytes, encoding="gbk")
+        stdout = io.TextIOWrapper(stdout_bytes, encoding="gbk")
+        stderr = io.TextIOWrapper(stderr_bytes, encoding="gbk")
+
+        with (
+            patch.object(main.sys, "stdin", stdin),
+            patch.object(main.sys, "stdout", stdout),
+            patch.object(main.sys, "stderr", stderr),
+        ):
+            main._configure_standard_streams()
+            decoded_request = json.loads(main.sys.stdin.readline())
+            main._notify_warmup(0.0, "引擎预热中…")
+            main.sys.stderr.write("中文日志\n")
+            main.sys.stdout.flush()
+            main.sys.stderr.flush()
+
+        self.assertEqual(request, decoded_request)
+        notification = json.loads(stdout_bytes.getvalue().decode("utf-8"))
+        self.assertEqual("引擎预热中…", notification["params"]["message"])
+        self.assertEqual("中文日志\n", stderr_bytes.getvalue().decode("utf-8"))
 
 
 if __name__ == "__main__":
