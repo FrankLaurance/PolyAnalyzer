@@ -159,6 +159,66 @@ class CliSafetyTests(unittest.TestCase):
             json.loads(stdout.getvalue()),
         )
 
+    def test_cli_stream_configuration_emits_utf8_json_and_progress(self):
+        stdin_bytes = io.BytesIO()
+        stdout_bytes = io.BytesIO()
+        stderr_bytes = io.BytesIO()
+        stdin = io.TextIOWrapper(stdin_bytes, encoding="gbk")
+        stdout = io.TextIOWrapper(stdout_bytes, encoding="gbk", newline="\r\n")
+        stderr = io.TextIOWrapper(stderr_bytes, encoding="gbk", newline="\r\n")
+        args = argparse.Namespace(json=True, quiet=False)
+
+        with (
+            patch.object(cli.sys, "stdin", stdin),
+            patch.object(cli.sys, "stdout", stdout),
+            patch.object(cli.sys, "stderr", stderr),
+        ):
+            cli._configure_standard_streams()
+            self.assertEqual(
+                ("utf-8", "strict"),
+                (cli.sys.stdin.encoding, cli.sys.stdin.errors),
+            )
+            self.assertEqual(
+                ("utf-8", "strict"),
+                (cli.sys.stdout.encoding, cli.sys.stdout.errors),
+            )
+            self.assertEqual(
+                ("utf-8", "backslashreplace"),
+                (cli.sys.stderr.encoding, cli.sys.stderr.errors),
+            )
+            progress = cli._progress_callback(args)
+            self.assertIsNotNone(progress)
+            progress(0.5, "中文进度")
+            cli._emit_result(args, {"success": True, "files": ["样品.rst"]})
+            cli.sys.stdout.flush()
+            cli.sys.stderr.flush()
+
+        self.assertEqual(
+            {"success": True, "files": ["样品.rst"]},
+            json.loads(stdout_bytes.getvalue().decode("utf-8")),
+        )
+        self.assertEqual(
+            ["[ 50.00%] 中文进度"],
+            stderr_bytes.getvalue().decode("utf-8").splitlines(),
+        )
+
+    def test_programmatic_main_does_not_reconfigure_consumed_stdin(self):
+        stdin = io.TextIOWrapper(io.BytesIO(b"already read\n"), encoding="utf-8")
+        stdin.readline()
+        args = argparse.Namespace(func=lambda _args: cli.EXIT_OK)
+
+        class FakeParser:
+            def parse_args(self, _argv):
+                return args
+
+        with (
+            patch.object(cli, "build_parser", return_value=FakeParser()),
+            patch.object(cli.sys, "stdin", stdin),
+        ):
+            exit_code = cli.main([])
+
+        self.assertEqual(cli.EXIT_OK, exit_code)
+
 
 class PackagingTests(unittest.TestCase):
     def test_hidden_imports_include_all_analyzers_and_exclude_scipy(self):

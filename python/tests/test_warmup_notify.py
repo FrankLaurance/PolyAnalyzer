@@ -62,8 +62,10 @@ class SidecarStandardStreamTests(unittest.TestCase):
         stdout_bytes = io.BytesIO()
         stderr_bytes = io.BytesIO()
         stdin = io.TextIOWrapper(stdin_bytes, encoding="gbk")
-        stdout = io.TextIOWrapper(stdout_bytes, encoding="gbk")
-        stderr = io.TextIOWrapper(stderr_bytes, encoding="gbk")
+        # Explicit CRLF translation reproduces Windows pipe behavior even when
+        # this test runs on Linux or macOS.
+        stdout = io.TextIOWrapper(stdout_bytes, encoding="gbk", newline="\r\n")
+        stderr = io.TextIOWrapper(stderr_bytes, encoding="gbk", newline="\r\n")
 
         with (
             patch.object(main.sys, "stdin", stdin),
@@ -71,6 +73,12 @@ class SidecarStandardStreamTests(unittest.TestCase):
             patch.object(main.sys, "stderr", stderr),
         ):
             main._configure_standard_streams()
+            self.assertEqual("utf-8", main.sys.stdin.encoding)
+            self.assertEqual("strict", main.sys.stdin.errors)
+            self.assertEqual("utf-8", main.sys.stdout.encoding)
+            self.assertEqual("strict", main.sys.stdout.errors)
+            self.assertEqual("utf-8", main.sys.stderr.encoding)
+            self.assertEqual("backslashreplace", main.sys.stderr.errors)
             decoded_request = json.loads(main.sys.stdin.readline())
             main._notify_warmup(0.0, "引擎预热中…")
             main.sys.stderr.write("中文日志\n")
@@ -80,7 +88,10 @@ class SidecarStandardStreamTests(unittest.TestCase):
         self.assertEqual(request, decoded_request)
         notification = json.loads(stdout_bytes.getvalue().decode("utf-8"))
         self.assertEqual("引擎预热中…", notification["params"]["message"])
-        self.assertEqual("中文日志\n", stderr_bytes.getvalue().decode("utf-8"))
+        self.assertEqual(
+            ["中文日志"],
+            stderr_bytes.getvalue().decode("utf-8").splitlines(),
+        )
 
 
 if __name__ == "__main__":

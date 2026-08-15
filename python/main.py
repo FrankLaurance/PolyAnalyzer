@@ -10,6 +10,8 @@ import tempfile
 import threading
 import time
 
+from stream_encoding import configure_standard_streams as _configure_standard_streams
+
 
 _CACHE_ROOT = os.path.join(tempfile.gettempdir(), "polyanalyzer-cache")
 _MPL_CACHE_DIR = os.path.join(_CACHE_ROOT, "matplotlib")
@@ -18,24 +20,6 @@ os.makedirs(_MPL_CACHE_DIR, exist_ok=True)
 os.makedirs(_XDG_CACHE_DIR, exist_ok=True)
 os.environ["MPLCONFIGDIR"] = _MPL_CACHE_DIR
 os.environ["XDG_CACHE_HOME"] = _XDG_CACHE_DIR
-
-
-def _configure_standard_streams() -> None:
-    """Use UTF-8 for the JSON-RPC pipes on every platform.
-
-    Windows configures redirected Python streams with the system ANSI code
-    page. Tauri's shell plugin decodes sidecar output as UTF-8, so any Chinese
-    progress or log message would otherwise break the transport.
-    """
-    streams = (
-        (sys.stdin, "strict"),
-        (sys.stdout, "strict"),
-        (sys.stderr, "backslashreplace"),
-    )
-    for stream, errors in streams:
-        reconfigure = getattr(stream, "reconfigure", None)
-        if reconfigure is not None:
-            reconfigure(encoding="utf-8", errors=errors)
 
 
 def _setup_logging() -> None:

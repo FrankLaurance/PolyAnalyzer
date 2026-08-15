@@ -46,6 +46,8 @@ Every business subcommand supports:
 --quiet   # suppress progress output
 ```
 
+stdout and stderr use UTF-8 on every platform, including redirected pipes.
+
 Exit codes:
 
 | Code | Meaning |

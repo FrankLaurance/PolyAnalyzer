@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.4.2
+# PolyAnalyzer 2.4.4
 
 [中文](README.md)
 
@@ -28,6 +28,11 @@ v2.4.2 fixes:
 - Corrupted Analysis Profiles are preserved and reported instead of silently overwriting the default profile; setting writes are now atomic
 - Output cleanup now targets the same directories as the analyzers when the data directory is a symlink
 - Fixed Mw stats-table values for multiple samples, unified the DSC palette with GPC, and standardized log-file naming
+
+v2.4.4 fixes:
+
+- The Windows desktop sidecar now uses UTF-8 for stdin, stdout, and stderr, preventing `invalid utf-8 sequence` errors from Chinese paths, filenames, warmup notifications, or logs
+- The packaged `poly` CLI now emits UTF-8 through redirected Windows pipes, keeping Chinese JSON, progress, and error output reliably machine-readable
 
 The React frontend communicates with the Python sidecar over stdin/stdout JSON-RPC. Progress notifications include an analyzer and request ID so tab activity remains isolated.
 
@@ -68,6 +73,7 @@ python -m unittest discover -s python/tests -p "test_*.py"
 pnpm test
 pnpm build
 python python/build_sidecar.py
+python python/smoke_binaries.py
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
@@ -84,7 +90,7 @@ pnpm tauri build
 ## Version Synchronization
 
 ```bash
-./release.sh 2.4.2
+./release.sh 2.4.4
 ```
 
 The script synchronizes version fields only. It does not create a commit, Git tag, or GitHub Release. It updates:

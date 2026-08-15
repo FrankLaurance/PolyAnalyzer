@@ -1,4 +1,4 @@
-# PolyAnalyzer 2.4.2
+# PolyAnalyzer 2.4.4
 
 [English](README_EN.md)
 
@@ -28,6 +28,11 @@ v2.4.2 修复：
 - 损坏的 Analysis Profile 保留原文件并报错，不再静默覆盖默认 Profile；设置文件写入改为原子操作
 - 清理输出与符号链接数据目录口径一致，不再误删真实路径下的输出
 - 修正 Mw 统计表多样品取值、DSC 调色板与 GPC 统一、日志文件统一命名
+
+v2.4.4 修复：
+
+- Windows 桌面端 sidecar 的 stdin/stdout/stderr 统一使用 UTF-8，修复中文路径、文件名、预热通知或日志触发的 `invalid utf-8 sequence` 错误
+- 随安装包提供的 `poly` CLI 在 Windows 重定向管道下统一输出 UTF-8，确保中文 JSON、进度和错误信息可可靠解析
 
 前端通过 stdin/stdout JSON-RPC 调用 Python sidecar。分析进度包含 analyzer 和 request ID，避免多个标签页之间互相覆盖。
 
@@ -68,6 +73,7 @@ python -m unittest discover -s python/tests -p "test_*.py"
 pnpm test
 pnpm build
 python python/build_sidecar.py
+python python/smoke_binaries.py
 cargo check --manifest-path src-tauri/Cargo.toml
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
@@ -84,7 +90,7 @@ pnpm tauri build
 ## 版本同步
 
 ```bash
-./release.sh 2.4.2
+./release.sh 2.4.4
 ```
 
 脚本只同步版本字段，不创建 commit、Git tag 或 GitHub Release。它会更新：

@@ -14,6 +14,13 @@ import sys
 import tempfile
 from typing import Any, Callable
 
+from stream_encoding import configure_standard_streams as _configure_standard_streams
+
+# Configure the executable process before cache setup and analyzer imports can
+# emit output. Importers that call ``main`` retain ownership of their streams.
+if __name__ == "__main__":
+    _configure_standard_streams()
+
 _CACHE_ROOT = os.path.join(tempfile.gettempdir(), "polyanalyzer-cache")
 _MPL_CACHE_DIR = os.path.join(_CACHE_ROOT, "matplotlib")
 _XDG_CACHE_DIR = os.path.join(_CACHE_ROOT, "xdg")
